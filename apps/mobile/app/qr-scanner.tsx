@@ -117,11 +117,11 @@ export default function QRScannerScreen() {
     <View style={styles.container}>
       {scanning ? (
         <View style={styles.scanContainer}>
-          {Platform.OS !== 'web' && permission?.granted ? (
+          {permission?.granted ? (
             <View style={styles.cameraBox}>
               <CameraView
                 style={StyleSheet.absoluteFillObject}
-                facing="back"
+                facing="environment"
                 onBarcodeScanned={loading ? undefined : handleBarcodeScanned}
                 barcodeScannerSettings={{
                   barcodeTypes: ["qr"],
@@ -132,14 +132,12 @@ export default function QRScannerScreen() {
           ) : (
             <View style={styles.cameraBox}>
               <Text style={styles.cameraText}>
-                {Platform.OS === 'web' 
-                  ? (language === 'ar' ? 'الكاميرا غير مدعومة على متصفح الويب' : 'Camera not supported on Web')
-                  : (!permission 
-                      ? (language === 'ar' ? 'جاري طلب صلاحية الكاميرا...' : 'Requesting camera permission...')
-                      : (language === 'ar' ? 'صلاحية الكاميرا مطلوبة' : 'Camera permission required')
-                    )}
+                {!permission 
+                    ? (language === 'ar' ? 'جاري طلب صلاحية الكاميرا...' : 'Requesting camera permission...')
+                    : (language === 'ar' ? 'صلاحية الكاميرا مطلوبة لعملية المسح' : 'Camera permission required')
+                }
               </Text>
-              {!permission?.granted && Platform.OS !== 'web' && (
+              {!permission?.granted && (
                 <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
                   <Text style={styles.permissionBtnText}>
                     {language === 'ar' ? 'السماح بالكاميرا' : 'Grant Permission'}

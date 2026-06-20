@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
+import * as Location from 'expo-location';
+import { useCameraPermissions } from 'expo-camera';
 
 export default function PermissionsScreen() {
   const router = useRouter();
   const { language, isHighContrast } = useNavigationStore();
 
   const [locationGranted, setLocationGranted] = useState(false);
-  const [cameraGranted, setCameraGranted] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
+  const cameraGranted = cameraPermission?.granted ?? false;
 
   useEffect(() => {
     const speakInstructions = () => {
@@ -22,16 +26,35 @@ export default function PermissionsScreen() {
     speakInstructions();
   }, [language]);
 
-  const requestLocation = () => {
-    setLocationGranted(true);
-    const msg = language === 'ar' ? 'تم منح صلاحية الموقع بنجاح' : 'Location permission granted successfully';
-    VoiceService.speak(msg);
+  const requestLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        setLocationGranted(true);
+        const msg = language === 'ar' ? 'تم منح صلاحية الموقع بنجاح' : 'Location permission granted successfully';
+        VoiceService.speak(msg);
+      } else {
+        const msg = language === 'ar' ? 'تم رفض صلاحية الموقع' : 'Location permission denied';
+        VoiceService.speak(msg);
+      }
+    } catch (err) {
+      console.warn("Location request error", err);
+    }
   };
 
-  const requestCamera = () => {
-    setCameraGranted(true);
-    const msg = language === 'ar' ? 'تم منح صلاحية الكاميرا بنجاح' : 'Camera permission granted successfully';
-    VoiceService.speak(msg);
+  const requestCamera = async () => {
+    try {
+      const result = await requestCameraPermission();
+      if (result.granted) {
+        const msg = language === 'ar' ? 'تم منح صلاحية الكاميرا بنجاح' : 'Camera permission granted successfully';
+        VoiceService.speak(msg);
+      } else {
+        const msg = language === 'ar' ? 'تم رفض صلاحية الكاميرا' : 'Camera permission denied';
+        VoiceService.speak(msg);
+      }
+    } catch (err) {
+      console.warn("Camera request error", err);
+    }
   };
 
   const handleContinue = () => {
