@@ -1,4 +1,4 @@
-import { Building, NavigationPoint, Route, RouteStep, Report, EmergencyRequest, QRCode } from '@dallni/types';
+import { Building, NavigationPoint, Route, RouteStep, Report, EmergencyRequest, QRCode } from '@baser/types';
 import { supabase } from '../lib/supabase';
 
 class SupabaseService {

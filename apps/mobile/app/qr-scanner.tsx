@@ -6,7 +6,7 @@ import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
-import { NavigationPoint } from '@dallni/types';
+import { NavigationPoint } from '@baser/types';
 
 export default function QRScannerScreen() {
   const router = useRouter();

@@ -7,7 +7,7 @@ import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
 import * as Location from 'expo-location';
-import { NavigationPoint } from '@dallni/types';
+import { NavigationPoint } from '@baser/types';
 
 export default function WhereAmIScreen() {
   const router = useRouter();

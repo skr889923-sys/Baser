@@ -1,5 +1,5 @@
 {
-  "name": "@dallni/mobile",
+  "name": "@baser/mobile",
   "version": "1.0.0",
   "private": true,
   "main": "index.js",
@@ -11,7 +11,7 @@
     "ts:check": "tsc"
   },
   "dependencies": {
-    "@dallni/types": "*",
+    "@baser/types": "*",
     "@opentelemetry/api": "^1.9.1",
     "@supabase/supabase-js": "^2.108.2",
     "expo": "~51.0.0",

@@ -5,7 +5,7 @@ import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
-import { ReportType } from '@dallni/types';
+import { ReportType } from '@baser/types';
 
 export default function ReportScreen() {
   const router = useRouter();

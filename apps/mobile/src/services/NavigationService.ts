@@ -1,4 +1,4 @@
-import { NavigationPoint, Route, RouteStep, RouteType } from '@dallni/types';
+import { NavigationPoint, Route, RouteStep, RouteType } from '@baser/types';
 import SupabaseService from './SupabaseService';
 import VoiceService from './VoiceService';
 import HapticsService from './HapticsService';
@@ -136,8 +136,8 @@ class NavigationService {
 
   public async announceArrival(isAr: boolean = true): Promise<void> {
     const text = isAr 
-      ? 'لقد وصلت إلى وجهتك بأمان. شكراً لاستخدامك تطبيق دلّني.' 
-      : 'You have successfully arrived at your destination. Thank you for using Dallni.';
+      ? 'لقد وصلت إلى وجهتك بأمان. شكراً لاستخدامك تطبيق بصير.' 
+      : 'You have successfully arrived at your destination. Thank you for using Baser.';
     
     await HapticsService.trigger('arrived');
     await VoiceService.speak(text);

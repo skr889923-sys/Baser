@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Building } from '@dallni/types';
+import { Building } from '@baser/types';
 import { Building2, Plus, RefreshCw, Trash2, Edit2 } from 'lucide-react';
 
 export default function BuildingsPage() {

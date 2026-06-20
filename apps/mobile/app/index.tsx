@@ -12,7 +12,7 @@ export default function WelcomeScreen() {
     // Vocal welcome message when screen loads
     const timer = setTimeout(() => {
       VoiceService.speak(
-        'مرحبًا بك في تطبيق دَلّني للملاحة الجامعية. اضغط في منتصف الشاشة لاختيار اللغة، أو اضغط أسفل الشاشة للبدء.'
+        'مرحبًا بك في تطبيق بصير للملاحة الجامعية. اضغط في منتصف الشاشة لاختيار اللغة، أو اضغط أسفل الشاشة للبدء.'
       );
     }, 800);
     return () => clearTimeout(timer);
@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title} accessibilityRole="header">
-          دَلّني | Dallni
+          بصير | Baser
         </Text>
         <Text style={styles.subtitle}>
           {language === 'ar' 

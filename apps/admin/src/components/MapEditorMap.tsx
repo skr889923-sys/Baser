@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../lib/supabase';
-import type { NavigationPoint, Route } from '@dallni/types';
+import type { NavigationPoint, Route } from '@baser/types';
 import 'leaflet/dist/leaflet.css';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;

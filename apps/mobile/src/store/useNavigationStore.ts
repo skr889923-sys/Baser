@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Route, RouteStep, NavigationPoint } from '@dallni/types';
+import { Route, RouteStep, NavigationPoint } from '@baser/types';
 import NavigationService from '../services/NavigationService';
 
 interface NavigationState {

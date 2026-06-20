@@ -1,4 +1,4 @@
--- Dallni Campus Seed Data
+-- Baser Campus Seed Data
 
 -- 1. Insert Buildings
 insert into public.buildings (id, name_ar, name_en, description_ar, description_en, type, latitude, longitude, address_text, is_accessible, is_active) values
@@ -55,6 +55,6 @@ insert into public.route_steps (id, route_id, step_order, from_point_id, to_poin
 
 -- 6. Insert QR codes
 insert into public.qr_codes (id, navigation_point_id, code, qr_image_url, scan_count) values
-('q1111111-1111-1111-1111-111111111111', 'p1111111-1111-1111-1111-111111111002', 'dallni://point/p1111111-1111-1111-1111-111111111002', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=dallni://point/p1111111-1111-1111-1111-111111111002', 45),
-('q2222222-2222-2222-2222-222222222222', 'p1111111-1111-1111-1111-111111111003', 'dallni://point/p1111111-1111-1111-1111-111111111003', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=dallni://point/p1111111-1111-1111-1111-111111111003', 12),
-('q3333333-3333-3333-3333-333333333333', 'p1111111-1111-1111-1111-111111111004', 'dallni://point/p1111111-1111-1111-1111-111111111004', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=dallni://point/p1111111-1111-1111-1111-111111111004', 38);
+('q1111111-1111-1111-1111-111111111111', 'p1111111-1111-1111-1111-111111111002', 'baser://point/p1111111-1111-1111-1111-111111111002', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=baser://point/p1111111-1111-1111-1111-111111111002', 45),
+('q2222222-2222-2222-2222-222222222222', 'p1111111-1111-1111-1111-111111111003', 'baser://point/p1111111-1111-1111-1111-111111111003', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=baser://point/p1111111-1111-1111-1111-111111111003', 12),
+('q3333333-3333-3333-3333-333333333333', 'p1111111-1111-1111-1111-111111111004', 'baser://point/p1111111-1111-1111-1111-111111111004', 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=baser://point/p1111111-1111-1111-1111-111111111004', 38);

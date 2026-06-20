@@ -1,5 +1,5 @@
 {
-  "name": "@dallni/admin",
+  "name": "@baser/admin",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@dallni/types": "*",
+    "@baser/types": "*",
     "@supabase/supabase-js": "^2.108.2",
     "@types/leaflet": "^1.9.21",
     "clsx": "^2.1.1",

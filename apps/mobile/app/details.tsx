@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import NavigationService from '../src/services/NavigationService';
-import { NavigationPoint, Route, RouteStep } from '@dallni/types';
+import { NavigationPoint, Route, RouteStep } from '@baser/types';
 import VoiceService from '../src/services/VoiceService';
 
 export default function DetailsScreen() {

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Dallni",
-    "slug": "dallni",
+    "name": "Baser",
+    "slug": "baser",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -11,10 +11,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dallni.app"
+      "bundleIdentifier": "com.baser.app"
     },
     "android": {
-      "package": "com.dallni.app"
+      "package": "com.baser.app"
     },
     "web": {},
     "plugins": [
@@ -22,10 +22,10 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Dallni to use your location for precise indoor navigation."
+          "locationAlwaysAndWhenInUsePermission": "Allow Baser to use your location for precise indoor navigation."
         }
       ]
     ],
-    "scheme": "dallni"
+    "scheme": "baser"
   }
 }

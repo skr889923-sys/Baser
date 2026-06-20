@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TextInput, FlatList, TouchableOpacity, ScrollVi
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
-import { NavigationPoint } from '@dallni/types';
+import { NavigationPoint } from '@baser/types';
 import VoiceService from '../src/services/VoiceService';
 
 type CategoryFilter = 'all' | 'college' | 'restroom' | 'elevator' | 'ramp' | 'services';

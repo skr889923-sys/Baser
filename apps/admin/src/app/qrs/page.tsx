@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { NavigationPoint, QRCode as DallniQRCode } from '@dallni/types';
+import { NavigationPoint, QRCode as BaserQRCode } from '@baser/types';
 import { QrCode, Plus, RefreshCw, Trash2, Printer } from 'lucide-react';
 
 export default function QRsPage() {
@@ -37,7 +37,7 @@ export default function QRsPage() {
 
   const handleGenerateContent = () => {
     // Generate a random UUID-like string for content
-    const randomContent = `DALLNI-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const randomContent = `BASER-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     setFormData({ ...formData, code_content: randomContent });
   };
 
@@ -76,7 +76,7 @@ export default function QRsPage() {
         <html dir="rtl">
           <head><title>طباعة رمز QR</title></head>
           <body style="display:flex; justify-content:center; align-items:center; height:100vh; margin:0; flex-direction:column; font-family: sans-serif;">
-            <h1 style="margin-bottom: 20px;">نظام دلّني</h1>
+            <h1 style="margin-bottom: 20px;">نظام بصير</h1>
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(content)}" alt="QR Code" />
             <p style="margin-top: 20px; font-size: 14px; color: #666;">${content}</p>
             <script>window.onload = function() { window.print(); window.close(); }</script>
@@ -125,7 +125,7 @@ export default function QRsPage() {
                 <span>المحتوى الرقمي للكود (Data) *</span>
                 <button type="button" onClick={handleGenerateContent} className="text-emerald-600 text-xs font-bold hover:underline">توليد تلقائي</button>
               </label>
-              <input required value={formData.code_content} onChange={e => setFormData({...formData, code_content: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-left" dir="ltr" placeholder="DALLNI-XXXX" />
+              <input required value={formData.code_content} onChange={e => setFormData({...formData, code_content: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-left" dir="ltr" placeholder="BASER-XXXX" />
             </div>
 
             <div className="md:col-span-2 flex justify-end gap-3 mt-4 border-t pt-6">

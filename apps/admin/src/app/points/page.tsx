@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { NavigationPoint, Building } from '@dallni/types';
+import { NavigationPoint, Building } from '@baser/types';
 import { MapPin, Plus, RefreshCw, Trash2, Edit2, Volume2 } from 'lucide-react';
 
 export default function PointsPage() {
