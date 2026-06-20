@@ -98,8 +98,29 @@ class SupabaseService {
   }
 
   public async logQRScan(pointId: string, userId?: string | null): Promise<void> {
-    // Basic increment via RPC or just ignore in frontend MVP
-    console.log(`[SupabaseService] Real QR Log for ${pointId} triggered`);
+    const qrCode = await this.getQRCode(pointId);
+    if (!qrCode) return;
+
+    const { error: logError } = await supabase.from('qr_scan_logs').insert([{
+      user_id: userId || null,
+      qr_code_id: qrCode.id,
+    }]);
+
+    if (logError) {
+      console.error('[SupabaseService] Error logging QR scan:', logError);
+    }
+
+    const { error: updateError } = await supabase
+      .from('qr_codes')
+      .update({
+        scan_count: (qrCode.scan_count || 0) + 1,
+        last_scanned_at: new Date().toISOString(),
+      })
+      .eq('id', qrCode.id);
+
+    if (updateError) {
+      console.error('[SupabaseService] Error updating QR scan count:', updateError);
+    }
   }
 }
 

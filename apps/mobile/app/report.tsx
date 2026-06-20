@@ -3,9 +3,11 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Activi
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
+import NavigationService from '../src/services/NavigationService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
 import { ReportType } from '@baser/types';
+import * as Location from 'expo-location';
 
 export default function ReportScreen() {
   const router = useRouter();
@@ -34,15 +36,35 @@ export default function ReportScreen() {
     HapticsService.trigger('continue');
 
     try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let navigationPointId: string | null = null;
+      let buildingId: string | null = null;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const currentLocation = await Location.getCurrentPositionAsync({});
+          latitude = currentLocation.coords.latitude;
+          longitude = currentLocation.coords.longitude;
+
+          const nearestPoint = await NavigationService.getNearestPoint(latitude, longitude);
+          navigationPointId = nearestPoint?.id || null;
+          buildingId = nearestPoint?.building_id || null;
+        }
+      } catch (locationError) {
+        console.warn('[ReportScreen] Report submitted without live location:', locationError);
+      }
+
       await SupabaseService.submitReport({
         user_id: null,
         report_type: reportType,
         title: language === 'ar' ? `تقرير عائق: ${reportType}` : `Obstacle report: ${reportType}`,
         description: description || (language === 'ar' ? 'بلاغ مرسل من الجوال بدون تفاصيل إضافية' : 'Report sent from mobile without additional details'),
-        latitude: 24.7134,
-        longitude: 46.6753, // Near computer science
-        navigation_point_id: 'p1111111-1111-1111-1111-111111111003', // CS Lobby
-        building_id: 'b1111111-1111-1111-1111-111111111111'
+        latitude,
+        longitude,
+        navigation_point_id: navigationPointId,
+        building_id: buildingId
       });
 
       const successMsg = language === 'ar'

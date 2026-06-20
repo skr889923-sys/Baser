@@ -65,7 +65,7 @@ export default function QRScannerScreen() {
     }
   };
 
-  // Simulate scanning the College of Computer Science entrance QR code
+  // Simulate scanning an available entrance point from the database
   const handleSimulateScan = async () => {
     if (!scanning || loading) return;
     setScanning(false);
@@ -74,21 +74,20 @@ export default function QRScannerScreen() {
     HapticsService.trigger('arrived');
     
     try {
-      const csEntrancePointId = 'p1111111-1111-1111-1111-111111111002';
       const points = await SupabaseService.getNavigationPoints();
-      const point = points.find(p => p.id === csEntrancePointId);
+      const point = points.find(p => p.type === 'entrance') || points[0];
       
       if (point) {
         setScannedPoint(point);
         await SupabaseService.logQRScan(point.id);
         
         const welcomeSpeech = language === 'ar'
-          ? `تم مسح الرمز بنجاح. أنت الآن عند: الباب التلقائي الرئيسي لكلية الحاسب. الدور الأرضي. المصعد في نهاية الممر على يسارك مسافة 25 متراً. ودورة المياه المهيأة على بعد 12 متراً في الممر الأيمن. اختر أحد الخيارات المتاحة للمتابعة.`
-          : `Scan successful. You are currently at: CS Main Automatic Door, Ground Floor. The elevator is at the end of the left corridor, 25 meters away. The accessible restroom is 12 meters down the right corridor. Choose an option to proceed.`;
+          ? `تم مسح الرمز بنجاح. أنت الآن عند: ${point.name_ar}. ${point.audio_instruction_ar}. اختر أحد الخيارات المتاحة للمتابعة.`
+          : `Scan successful. You are currently at: ${point.name_en}. ${point.audio_instruction_en}. Choose an option to proceed.`;
         
         VoiceService.speak(welcomeSpeech);
       } else {
-        setErrorMsg('Simulation point not found in DB.');
+        setErrorMsg(language === 'ar' ? 'لا توجد نقاط ملاحية متاحة للمحاكاة.' : 'No navigation points available for simulation.');
       }
     } catch (error) {
       console.error(error);
@@ -121,7 +120,7 @@ export default function QRScannerScreen() {
             <View style={styles.cameraBox}>
               <CameraView
                 style={StyleSheet.absoluteFillObject}
-                facing="environment"
+                facing="back"
                 onBarcodeScanned={loading ? undefined : handleBarcodeScanned}
                 barcodeScannerSettings={{
                   barcodeTypes: ["qr"],

@@ -37,14 +37,15 @@ export default function WhereAmIScreen() {
 
       setNearestPoint(point);
 
+      let computedDistance = 0;
       if (point.latitude && point.longitude) {
-        const dist = NavigationService.getDistance(
+        computedDistance = Math.round(NavigationService.getDistance(
           coords.latitude,
           coords.longitude,
           point.latitude,
           point.longitude
-        );
-        setDistance(Math.round(dist));
+        ));
+        setDistance(computedDistance);
       }
 
       // Voice announcement
@@ -52,8 +53,8 @@ export default function WhereAmIScreen() {
       const desc = language === 'ar' ? point.description_ar : point.description_en;
       
       const vocalText = language === 'ar'
-        ? `أنت الآن بالقرب من: ${name}. تفاصيل الموقع: ${desc}. على بعد حوالي ${Math.round(distance)} أمتار.`
-        : `You are currently near: ${name}. Location details: ${desc}. Approximately ${Math.round(distance)} meters away.`;
+        ? `أنت الآن بالقرب من: ${name}. تفاصيل الموقع: ${desc}. على بعد حوالي ${computedDistance} أمتار.`
+        : `You are currently near: ${name}. Location details: ${desc}. Approximately ${computedDistance} meters away.`;
       
       VoiceService.speak(vocalText);
       } catch (err) {

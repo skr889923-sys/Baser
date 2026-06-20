@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Route, RouteStep, NavigationPoint } from '@baser/types';
 import NavigationService from '../services/NavigationService';
+import VoiceService from '../services/VoiceService';
 
 interface NavigationState {
   currentLocation: { latitude: number; longitude: number } | null;

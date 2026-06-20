@@ -82,12 +82,13 @@ class NavigationService {
       }
     }
 
-    return routes.slice(0, 1);
+    return [];
   }
 
   // Selects the best route based on user preference
-  public selectBestRoute(routes: Route[], preference: RouteType): Route {
-    if (routes.length <= 1) return routes[0];
+  public selectBestRoute(routes: Route[], preference: RouteType): Route | null {
+    if (routes.length === 0) return null;
+    if (routes.length === 1) return routes[0];
 
     const sorted = [...routes].sort((a, b) => {
       if (preference === 'blind_friendly') {

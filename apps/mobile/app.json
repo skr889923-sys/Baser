@@ -16,7 +16,10 @@
     "android": {
       "package": "com.baser.app"
     },
-    "web": {},
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
     "plugins": [
       "expo-router",
       [

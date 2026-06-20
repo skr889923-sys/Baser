@@ -11,7 +11,8 @@ class VoiceService {
     this.lastSpokenText = text;
     if (this.isMuted) return; // Do not speak if muted
 
-    const langCode = forceLanguage || this.language === 'ar' ? 'ar-SA' : 'en-US';
+    const activeLanguage = forceLanguage || this.language;
+    const langCode = activeLanguage === 'ar' ? 'ar-SA' : 'en-US';
 
     console.log(`[VoiceService] Speaking: "${text}" (${langCode})`);
 

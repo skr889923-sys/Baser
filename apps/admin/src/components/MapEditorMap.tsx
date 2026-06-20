@@ -159,10 +159,12 @@ export default function MapEditorMap() {
       step_order: 1,
       from_point_id: routeStart.id,
       to_point_id: routeEnd.id,
-      instruction_ar: `توجة من ${routeStart.name_ar} إلى ${routeEnd.name_ar} لمسافة ${distance} متر.`,
+      instruction_ar: `توجه من ${routeStart.name_ar} إلى ${routeEnd.name_ar} لمسافة ${distance} متر.`,
       instruction_en: `Proceed from ${routeStart.name_en} to ${routeEnd.name_en} for ${distance} meters.`,
       distance_meters: distance,
-      haptic_pattern: 'none'
+      direction: 'straight',
+      haptic_pattern: 'continue',
+      warning_level: hasStairs ? 'caution' : 'none'
     }]);
 
     if (stepError) {

@@ -118,7 +118,7 @@ alter table public.route_steps enable row level security;
 create table public.qr_codes (
   id uuid default gen_random_uuid() primary key,
   navigation_point_id uuid references public.navigation_points(id) on delete cascade not null,
-  code text not null unique,
+  code_content text not null unique,
   qr_image_url text,
   scan_count integer not null default 0,
   last_scanned_at timestamp with time zone,
@@ -189,6 +189,33 @@ create table public.qr_scan_logs (
 );
 
 alter table public.qr_scan_logs enable row level security;
+
+-- 12. voice_characters table
+create table public.voice_characters (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  gender text not null check(gender in ('female', 'male')) default 'female',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.voice_characters enable row level security;
+
+-- 13. voice_recordings table
+create table public.voice_recordings (
+  id uuid default gen_random_uuid() primary key,
+  character_id uuid references public.voice_characters(id) on delete cascade not null,
+  phrase_key text not null,
+  audio_url text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(character_id, phrase_key)
+);
+
+alter table public.voice_recordings enable row level security;
+
+insert into storage.buckets (id, name, public)
+values ('voiceovers', 'voiceovers', true)
+on conflict (id) do nothing;
 
 
 ----------------- Row Level Security (RLS) Policies -----------------
@@ -267,6 +294,9 @@ create policy "Allow staff to manage route steps" on public.route_steps
 create policy "Allow anyone to read qr codes" on public.qr_codes
   for select using (true);
 
+create policy "Allow anyone to update qr scan metadata" on public.qr_codes
+  for update using (true) with check (true);
+
 create policy "Allow staff to manage qr codes" on public.qr_codes
   for all using (
     exists (
@@ -324,5 +354,48 @@ create policy "Allow staff to read scan logs" on public.qr_scan_logs
     exists (
       select 1 from public.profiles
       where id = auth.uid() and role in ('super_admin', 'university_admin', 'support_agent')
+    )
+  );
+
+-- VOICEOVER POLICIES
+create policy "Allow anyone to read voice characters" on public.voice_characters
+  for select using (true);
+
+create policy "Allow staff to manage voice characters" on public.voice_characters
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role in ('super_admin', 'university_admin', 'building_manager', 'support_agent')
+    )
+  );
+
+create policy "Allow anyone to read voice recordings" on public.voice_recordings
+  for select using (true);
+
+create policy "Allow staff to manage voice recordings" on public.voice_recordings
+  for all using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role in ('super_admin', 'university_admin', 'building_manager', 'support_agent')
+    )
+  );
+
+-- VOICEOVER STORAGE POLICIES
+create policy "Allow anyone to read voiceover files" on storage.objects
+  for select using (bucket_id = 'voiceovers');
+
+create policy "Allow staff to manage voiceover files" on storage.objects
+  for all using (
+    bucket_id = 'voiceovers'
+    and exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role in ('super_admin', 'university_admin', 'building_manager', 'support_agent')
+    )
+  )
+  with check (
+    bucket_id = 'voiceovers'
+    and exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role in ('super_admin', 'university_admin', 'building_manager', 'support_agent')
     )
   );

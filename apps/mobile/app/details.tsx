@@ -17,9 +17,7 @@ export default function DetailsScreen() {
   const [route, setRoute] = useState<Route | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // We default to the main campus gate as the starting point for seed demonstration
-  const START_POINT_ID = '00000000-0000-0000-0000-000000000000'; 
+  const startPointId = params.startPointId as string | undefined;
 
   useEffect(() => {
     const loadRouteData = async () => {
@@ -30,10 +28,16 @@ export default function DetailsScreen() {
         
         if (dest) {
           setPoint(dest);
+
+          const fallbackStartPoint = points.find(p => p.type === 'entrance' && p.id !== dest.id) || points.find(p => p.id !== dest.id);
+          const effectiveStartPointId = startPointId && startPointId !== dest.id ? startPointId : fallbackStartPoint?.id;
+
+          if (!effectiveStartPointId) {
+            VoiceService.speak(language === 'ar' ? 'نحتاج نقطة بداية مختلفة عن الوجهة لحساب المسار.' : 'A different start point is required to calculate a route.');
+            return;
+          }
           
-          // Fetch route from Gate to this point
-          // In actual use, this start point would be current location or last scanned QR
-          const routes = await NavigationService.getRoutesToDestination(START_POINT_ID, dest.id);
+          const routes = await NavigationService.getRoutesToDestination(effectiveStartPointId, dest.id);
           const bestRoute = NavigationService.selectBestRoute(routes, routeTypePreference);
           
           if (bestRoute) {
@@ -71,7 +75,7 @@ export default function DetailsScreen() {
     if (pointId) {
       loadRouteData();
     }
-  }, [pointId, routeTypePreference, language]);
+  }, [pointId, startPointId, routeTypePreference, language]);
 
   const handleStartNav = () => {
     if (route && point) {

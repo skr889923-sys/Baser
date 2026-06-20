@@ -86,7 +86,7 @@ erDiagram
 ### ٧. جدول رموز الاستجابة السريعة (`qr_codes`)
 - `id` (uuid, primary key): معرف الرمز.
 - `navigation_point_id` (uuid, foreign key): النقطة الملاحية المرتبطة بالملصق الورقي.
-- `code` (text, unique): الرمز النصي المشفر المدعوم في التطبيق (مثال: `baser://point/{uuid}`).
+- `code_content` (text, unique): الرمز النصي المشفر المدعوم في التطبيق (مثال: `BASEERA-ENTRANCE-001`).
 - `scan_count` (integer): إجمالي عدد مرات مسح الرمز.
 
 ### ٨. جدول البلاغات الميدانية (`reports`)

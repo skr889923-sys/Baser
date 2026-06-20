@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, FlatList, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import { NavigationPoint } from '@baser/types';
@@ -10,6 +10,8 @@ type CategoryFilter = 'all' | 'college' | 'restroom' | 'elevator' | 'ramp' | 'se
 
 export default function DestinationScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const startPointId = params.startPointId as string | undefined;
   const { language, isHighContrast } = useNavigationStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
@@ -70,7 +72,7 @@ export default function DestinationScreen() {
     // Navigate to details screen with the point ID
     router.push({
       pathname: '/details',
-      params: { pointId: point.id }
+      params: startPointId ? { pointId: point.id, startPointId } : { pointId: point.id }
     });
   };
 

@@ -5,6 +5,8 @@ import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
+import NavigationService from '../src/services/NavigationService';
+import * as Location from 'expo-location';
 
 export default function EmergencyScreen() {
   const router = useRouter();
@@ -33,13 +35,32 @@ export default function EmergencyScreen() {
     HapticsService.trigger('emergency');
 
     try {
-      // Create a mock SOS trigger
+      let latitude = 30.622971;
+      let longitude = 32.269073;
+      let nearestPointId: string | null = null;
+      let nearestBuildingId: string | null = null;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const currentLocation = await Location.getCurrentPositionAsync({});
+          latitude = currentLocation.coords.latitude;
+          longitude = currentLocation.coords.longitude;
+
+          const nearestPoint = await NavigationService.getNearestPoint(latitude, longitude);
+          nearestPointId = nearestPoint?.id || null;
+          nearestBuildingId = nearestPoint?.building_id || null;
+        }
+      } catch (locationError) {
+        console.warn('[EmergencyScreen] Falling back to default SOS coordinates:', locationError);
+      }
+
       await SupabaseService.submitEmergency({
         user_id: null,
-        latitude: 30.622971, // Suez Canal University coordinates
-        longitude: 32.269073,
-        nearest_point_id: null,
-        nearest_building_id: null,
+        latitude,
+        longitude,
+        nearest_point_id: nearestPointId,
+        nearest_building_id: nearestBuildingId,
         message: language === 'ar' ? 'طالب كفيف يحتاج مساعدة عند بوابة المشاة الرئيسية' : 'Visually impaired student needs assistance at main gate'
       });
 

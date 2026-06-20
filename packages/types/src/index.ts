@@ -119,11 +119,27 @@ export interface RouteStep {
 export interface QRCode {
   id: string;
   navigation_point_id: string;
-  code: string;
+  code_content: string;
   qr_image_url?: string;
   scan_count: number;
   last_scanned_at?: string;
   created_at: string;
+}
+
+export interface VoiceCharacter {
+  id: string;
+  name: string;
+  gender: 'female' | 'male';
+  created_at: string;
+}
+
+export interface VoiceRecording {
+  id: string;
+  character_id: string;
+  phrase_key: string;
+  audio_url: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type ReportType = 'obstacle' | 'closed_door' | 'broken_elevator' | 'maintenance_work' | 'crowded' | 'qr_issue' | 'routing_issue';
