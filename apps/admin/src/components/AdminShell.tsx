@@ -246,7 +246,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   {currentPage?.label || 'لوحة التحكم'}
                 </h1>
                 <p className="hidden sm:block text-xs text-slate-500 font-semibold truncate">
-                  جامعة قناة السويس | فكرة وتنفيذ: أ. رغد
+                  جامعة قناة السويس | فكرة وتطوير: أ. رغد
                 </p>
               </div>
             </div>
@@ -275,6 +275,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 <span className="hidden sm:inline">خروج</span>
               </button>
             </div>
+          </div>
+          <div className="sm:hidden border-t border-slate-100 bg-sky-50/80 px-4 py-1.5 text-center text-[11px] font-black text-slate-700">
+            فكرة وتطوير: أ. رغد
           </div>
         </header>
 
