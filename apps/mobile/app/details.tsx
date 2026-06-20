@@ -1,23 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import NavigationService from '../src/services/NavigationService';
 import { NavigationPoint, Route, RouteStep } from '@baser/types';
 import VoiceService from '../src/services/VoiceService';
+import {
+  getInterfaceTheme,
+  HeroPanel,
+  MetricCard,
+  PrimaryButton,
+  ScreenShell,
+  StatusPill,
+  surfaceStyle,
+} from '../src/components/BlindInterface';
 
 export default function DetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const pointId = params.pointId as string;
+  const startPointId = params.startPointId as string | undefined;
 
   const { language, routeTypePreference, setRoutePreference, startNavigation, isHighContrast } = useNavigationStore();
+  const theme = getInterfaceTheme(isHighContrast);
   const [point, setPoint] = useState<NavigationPoint | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [loading, setLoading] = useState(true);
-  const startPointId = params.startPointId as string | undefined;
 
   useEffect(() => {
     const loadRouteData = async () => {
@@ -25,45 +35,37 @@ export default function DetailsScreen() {
       try {
         const points = await SupabaseService.getNavigationPoints();
         const dest = points.find(p => p.id === pointId);
-        
-        if (dest) {
-          setPoint(dest);
 
-          const fallbackStartPoint = points.find(p => p.type === 'entrance' && p.id !== dest.id) || points.find(p => p.id !== dest.id);
-          const effectiveStartPointId = startPointId && startPointId !== dest.id ? startPointId : fallbackStartPoint?.id;
+        if (!dest) return;
+        setPoint(dest);
 
-          if (!effectiveStartPointId) {
-            VoiceService.speak(language === 'ar' ? 'نحتاج نقطة بداية مختلفة عن الوجهة لحساب المسار.' : 'A different start point is required to calculate a route.');
-            return;
-          }
-          
-          const routes = await NavigationService.getRoutesToDestination(effectiveStartPointId, dest.id);
-          const bestRoute = NavigationService.selectBestRoute(routes, routeTypePreference);
-          
-          if (bestRoute) {
-            setRoute(bestRoute);
-            const routeSteps = await SupabaseService.getRouteSteps(bestRoute.id);
-            setSteps(routeSteps);
+        const fallbackStartPoint = points.find(p => p.type === 'entrance' && p.id !== dest.id) || points.find(p => p.id !== dest.id);
+        const effectiveStartPointId = startPointId && startPointId !== dest.id ? startPointId : fallbackStartPoint?.id;
 
-            // Announce details to user
-            const name = language === 'ar' ? dest.name_ar : dest.name_en;
-            const dist = bestRoute.distance_meters;
-            const time = bestRoute.estimated_minutes;
-            const stairsTxt = bestRoute.has_stairs 
-              ? (language === 'ar' ? 'يحتوي على سلالم' : 'contains stairs') 
-              : (language === 'ar' ? 'خالي من السلالم' : 'no stairs');
-            const rampTxt = bestRoute.has_ramp 
-              ? (language === 'ar' ? 'يوجد منحدر كراسي' : 'ramp available') 
-              : '';
+        if (!effectiveStartPointId) {
+          VoiceService.speak(language === 'ar' ? 'نحتاج نقطة بداية مختلفة عن الوجهة لحساب المسار.' : 'A different start point is required to calculate a route.');
+          return;
+        }
 
-            const vocalSummary = language === 'ar'
-              ? `تفاصيل الوجهة: ${name}. المسافة ${dist} مترًا. الزمن المتوقع ${time} دقيقة. المسار ${stairsTxt}. ${rampTxt}. اضغط أسفل الشاشة لبدء الرحلة.`
-              : `Destination details: ${name}. Distance ${dist} meters. Estimated walk is ${time} minutes. Path is ${stairsTxt}. ${rampTxt}. Double tap the bottom button to start navigation.`;
-            
-            VoiceService.speak(vocalSummary);
-          } else {
-            VoiceService.speak(language === 'ar' ? 'نعتذر، لم نجد مسارًا مسجلاً لهذه الوجهة حاليًا.' : 'Sorry, no registered path found for this destination.');
-          }
+        const routes = await NavigationService.getRoutesToDestination(effectiveStartPointId, dest.id);
+        const bestRoute = NavigationService.selectBestRoute(routes, routeTypePreference);
+
+        if (bestRoute) {
+          setRoute(bestRoute);
+          const routeSteps = await SupabaseService.getRouteSteps(bestRoute.id);
+          setSteps(routeSteps);
+
+          const name = language === 'ar' ? dest.name_ar : dest.name_en;
+          const stairsText = bestRoute.has_stairs
+            ? (language === 'ar' ? 'يحتوي على سلالم' : 'contains stairs')
+            : (language === 'ar' ? 'خالي من السلالم' : 'has no stairs');
+          const vocalSummary = language === 'ar'
+            ? `تفاصيل الوجهة: ${name}. المسافة ${bestRoute.distance_meters} متر. الزمن المتوقع ${bestRoute.estimated_minutes} دقيقة. المسار ${stairsText}. اضغط زر بدء الإرشاد للمتابعة.`
+            : `Destination details: ${name}. Distance ${bestRoute.distance_meters} meters. Estimated time ${bestRoute.estimated_minutes} minutes. The path ${stairsText}. Press start guidance to continue.`;
+
+          VoiceService.speak(vocalSummary);
+        } else {
+          VoiceService.speak(language === 'ar' ? 'نعتذر، لم نجد مساراً مسجلاً لهذه الوجهة حالياً.' : 'Sorry, no registered path found for this destination.');
         }
       } catch (error) {
         console.error('Error loading route details:', error);
@@ -72,9 +74,7 @@ export default function DetailsScreen() {
       }
     };
 
-    if (pointId) {
-      loadRouteData();
-    }
+    if (pointId) loadRouteData();
   }, [pointId, startPointId, routeTypePreference, language]);
 
   const handleStartNav = () => {
@@ -84,13 +84,11 @@ export default function DetailsScreen() {
     }
   };
 
-  const styles = getStyles(isHighContrast);
-
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#1A5F7A" />
-        <Text style={styles.loadingText}>
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.accent} />
+        <Text style={[styles.loadingText, { color: theme.text }]}>
           {language === 'ar' ? 'جاري حساب أفضل مسار...' : 'Calculating optimal path...'}
         </Text>
       </View>
@@ -99,240 +97,202 @@ export default function DetailsScreen() {
 
   if (!point || !route) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>
-          {language === 'ar' ? 'حدث خطأ في تحميل تفاصيل الموقع.' : 'Error loading location details.'}
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.danger }]}>
+          {language === 'ar' ? 'لا يوجد مسار جاهز لهذه الوجهة حالياً.' : 'No ready route is available for this destination.'}
         </Text>
       </View>
     );
   }
 
+  const hasCaution = route.has_stairs || !route.visually_impaired_friendly;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title} accessibilityRole="header">
-        {language === 'ar' ? point.name_ar : point.name_en}
-      </Text>
-      
-      <Text style={styles.description}>
-        {language === 'ar' ? point.description_ar : point.description_en}
-      </Text>
+    <ScreenShell highContrast={isHighContrast}>
+      <HeroPanel
+        theme={theme}
+        eyebrow={language === 'ar' ? 'تأكيد المسار' : 'Route confirmation'}
+        title={language === 'ar' ? point.name_ar : point.name_en}
+        subtitle={language === 'ar' ? point.description_ar : point.description_en}
+        code="PATH"
+      />
 
-      {/* Route parameters cards */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>⏱️</Text>
-          <Text style={styles.statVal}>{route.estimated_minutes} د</Text>
-          <Text style={styles.statLbl}>{language === 'ar' ? 'زمن الوصول' : 'Duration'}</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statEmoji}>📏</Text>
-          <Text style={styles.statVal}>{route.distance_meters} م</Text>
-          <Text style={styles.statLbl}>{language === 'ar' ? 'المسافة' : 'Distance'}</Text>
-        </View>
+      <View style={styles.metricsRow}>
+        <MetricCard
+          theme={theme}
+          value={`${route.estimated_minutes} ${language === 'ar' ? 'د' : 'm'}`}
+          label={language === 'ar' ? 'زمن الوصول' : 'Duration'}
+        />
+        <MetricCard
+          theme={theme}
+          value={`${route.distance_meters} ${language === 'ar' ? 'م' : 'm'}`}
+          label={language === 'ar' ? 'المسافة' : 'Distance'}
+        />
       </View>
 
-      {/* Path Features List */}
-      <View style={styles.featuresSection}>
-        <Text style={styles.featuresTitle}>
-          {language === 'ar' ? 'خصائص المسار:' : 'Path properties:'}
+      <View style={styles.statusRow}>
+        <StatusPill
+          theme={theme}
+          tone={route.visually_impaired_friendly ? 'success' : 'warning'}
+          text={route.visually_impaired_friendly ? (language === 'ar' ? 'مناسب للمكفوفين' : 'Blind-friendly') : (language === 'ar' ? 'يحتاج انتباه' : 'Needs caution')}
+        />
+        <StatusPill
+          theme={theme}
+          tone={route.has_stairs ? 'warning' : 'success'}
+          text={route.has_stairs ? (language === 'ar' ? 'به سلالم' : 'Has stairs') : (language === 'ar' ? 'بدون سلالم' : 'No stairs')}
+        />
+        <StatusPill
+          theme={theme}
+          tone={route.wheelchair_accessible ? 'success' : 'normal'}
+          text={route.wheelchair_accessible ? (language === 'ar' ? 'مهيأ للكراسي' : 'Wheelchair ready') : (language === 'ar' ? 'تهيئة عادية' : 'Standard access')}
+        />
+      </View>
+
+      <View style={[styles.panel, surfaceStyle(theme)]}>
+        <Text style={[styles.panelTitle, { color: theme.text }]}>
+          {language === 'ar' ? 'خصائص السلامة' : 'Safety profile'}
         </Text>
-
-        <View style={styles.featureItem}>
-          <Text style={styles.featureBullet}>♿</Text>
-          <Text style={styles.featureText}>
-            {route.wheelchair_accessible 
-              ? (language === 'ar' ? 'مناسب للكراسي المتحركة والمنحدرات' : 'Wheelchair accessible (ramps available)')
-              : (language === 'ar' ? 'غير مهيأ بالكامل للكراسي المتحركة' : 'Not fully wheelchair friendly')}
+        <Text style={[styles.panelText, { color: theme.textMuted }]}>
+          {route.visually_impaired_friendly
+            ? (language === 'ar' ? 'المسار مفضل للتوجيه الصوتي ويحتوي على خطوات مناسبة للتنقل الداخلي.' : 'This route is preferred for voice guidance and indoor step navigation.')
+            : (language === 'ar' ? 'المسار متاح، لكن يفضل طلب مساعدة إذا كنت غير معتاد على الموقع.' : 'The route is available, but assistance is recommended if the area is unfamiliar.')}
+        </Text>
+        {hasCaution ? (
+          <Text style={[styles.warningText, { color: theme.warning }]}>
+            {language === 'ar' ? 'تنبيه: استمع للتعليمات كاملة قبل الحركة.' : 'Caution: listen to each instruction fully before moving.'}
           </Text>
-        </View>
-
-        <View style={styles.featureItem}>
-          <Text style={styles.featureBullet}>🪜</Text>
-          <Text style={styles.featureText}>
-            {route.has_stairs 
-              ? (language === 'ar' ? 'انتبه: يحتوي المسار على درجات سلم' : 'Caution: Path contains steps/stairs')
-              : (language === 'ar' ? 'خالي تمامًا من السلالم والعقبات المرتفعة' : 'No stairs or high steps')}
-          </Text>
-        </View>
-
-        <View style={styles.featureItem}>
-          <Text style={styles.featureBullet}>🕶️</Text>
-          <Text style={styles.featureText}>
-            {route.visually_impaired_friendly 
-              ? (language === 'ar' ? 'مجهز بمسارات لمسية أرضية للمكفوفين' : 'Tactile floor paths available')
-              : (language === 'ar' ? 'مسار رملي أو تقليدي بدون علامات أرضية' : 'Standard pathway without tactile blocks')}
-          </Text>
-        </View>
+        ) : null}
       </View>
 
-      {/* Navigation Preference Buttons */}
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {language === 'ar' ? 'تفضيل حساب المسار' : 'Route preference'}
+      </Text>
+
       <View style={styles.preferenceRow}>
         <TouchableOpacity
-          style={[styles.prefBtn, routeTypePreference === 'safe_accessible' && styles.activePrefBtn]}
+          style={[
+            styles.preferenceButton,
+            {
+              backgroundColor: routeTypePreference === 'safe_accessible' ? theme.accentDark : theme.surface,
+              borderColor: routeTypePreference === 'safe_accessible' ? theme.accent : theme.borderSoft,
+            },
+          ]}
           onPress={() => setRoutePreference('safe_accessible')}
           accessible={true}
-          accessibilityLabel={language === 'ar' ? 'تفضيل مسار آمن ومهيأ' : 'Prefer accessible path'}
+          accessibilityLabel={language === 'ar' ? 'تفضيل مسار آمن ومهيأ' : 'Prefer safe accessible route'}
           accessibilityState={{ selected: routeTypePreference === 'safe_accessible' }}
         >
-          <Text style={styles.prefBtnText}>🛡️ {language === 'ar' ? 'آمن ومهيأ' : 'Safe & Accessible'}</Text>
+          <Text style={[styles.preferenceCode, { color: theme.accent }]}>SAFE</Text>
+          <Text style={[styles.preferenceText, { color: theme.text }]}>{language === 'ar' ? 'آمن ومهيأ' : 'Safe route'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.prefBtn, routeTypePreference === 'fastest' && styles.activePrefBtn]}
+          style={[
+            styles.preferenceButton,
+            {
+              backgroundColor: routeTypePreference === 'fastest' ? theme.accentDark : theme.surface,
+              borderColor: routeTypePreference === 'fastest' ? theme.accent : theme.borderSoft,
+            },
+          ]}
           onPress={() => setRoutePreference('fastest')}
           accessible={true}
-          accessibilityLabel={language === 'ar' ? 'تفضيل أسرع مسار' : 'Prefer fastest path'}
+          accessibilityLabel={language === 'ar' ? 'تفضيل أسرع مسار' : 'Prefer fastest route'}
           accessibilityState={{ selected: routeTypePreference === 'fastest' }}
         >
-          <Text style={styles.prefBtnText}>⚡ {language === 'ar' ? 'أسرع مسار' : 'Fastest'}</Text>
+          <Text style={[styles.preferenceCode, { color: theme.accent }]}>FAST</Text>
+          <Text style={[styles.preferenceText, { color: theme.text }]}>{language === 'ar' ? 'أسرع مسار' : 'Fastest'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Start Button */}
-      <TouchableOpacity
-        style={styles.startBtn}
+      <PrimaryButton
+        theme={theme}
+        title={language === 'ar' ? 'ابدأ الإرشاد الصوتي' : 'Start voice guidance'}
         onPress={handleStartNav}
-        accessible={true}
         accessibilityLabel={language === 'ar' ? 'ابدأ الإرشاد الملاحي الصوتي الآن' : 'Start voice navigation now'}
-        accessibilityHint={language === 'ar' ? 'اضغط مرتين لبدء رحلة التوجيه خطوة بخطوة بالصوت والاهتزاز' : 'Double tap to initiate turn-by-turn guidance'}
-      >
-        <Text style={styles.startBtnText}>
-          {language === 'ar' ? 'ابدأ الإرشاد 🚀' : 'Start Navigation 🚀'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        accessibilityHint={language === 'ar' ? 'اضغط مرتين لبدء التوجيه خطوة بخطوة بالصوت والاهتزاز' : 'Double tap to begin turn-by-turn speech and haptics'}
+      />
+    </ScreenShell>
   );
 }
 
-const getStyles = (highContrast: boolean) => StyleSheet.create({
+const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   loadingText: {
-    color: '#FFFFFF',
     fontSize: 18,
+    fontWeight: '800',
     marginTop: 16,
   },
   errorText: {
-    color: '#E74C3C',
     fontSize: 18,
+    fontWeight: '800',
     textAlign: 'center',
+    lineHeight: 26,
   },
-  container: {
-    flexGrow: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
-    padding: 20,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    color: '#CCCCCC',
-    lineHeight: 24,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  statsRow: {
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#1E272C',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    marginHorizontal: 8,
-    borderWidth: 1.5,
-    borderColor: '#34495E',
-  },
-  statEmoji: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  statVal: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  statLbl: {
-    color: '#B0B0B0',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  featuresSection: {
-    backgroundColor: '#161E22',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#2C3E50',
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    marginHorizontal: -5,
     marginBottom: 14,
   },
-  featureItem: {
+  statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
   },
-  featureBullet: {
-    fontSize: 20,
-    marginRight: 12,
+  panel: {
+    borderWidth: 1.5,
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 18,
   },
-  featureText: {
-    color: '#E0E0E0',
+  panelTitle: {
+    fontSize: 19,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  panelText: {
     fontSize: 15,
-    flex: 1,
+    lineHeight: 23,
+    fontWeight: '600',
+  },
+  warningText: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '900',
+    marginTop: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 12,
   },
   preferenceRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 28,
+    gap: 10,
+    marginBottom: 8,
   },
-  prefBtn: {
+  preferenceButton: {
     flex: 1,
-    backgroundColor: '#2C3E50',
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginHorizontal: 6,
-    alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#34495E',
-  },
-  activePrefBtn: {
-    backgroundColor: highContrast ? '#1A5F7A' : '#1F8A70',
-    borderColor: highContrast ? '#FFFF00' : '#1F8A70',
-  },
-  prefBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  startBtn: {
-    backgroundColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    paddingVertical: 22,
     borderRadius: 18,
-    alignItems: 'center',
+    padding: 14,
+    minHeight: 92,
+    justifyContent: 'center',
   },
-  startBtnText: {
-    color: highContrast ? '#000000' : '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
+  preferenceCode: {
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  preferenceText: {
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '900',
   },
 });

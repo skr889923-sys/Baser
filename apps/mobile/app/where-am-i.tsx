@@ -1,65 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import NavigationService from '../src/services/NavigationService';
-import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
 import * as Location from 'expo-location';
 import { NavigationPoint } from '@baser/types';
+import {
+  getInterfaceTheme,
+  HeroPanel,
+  MetricCard,
+  PrimaryButton,
+  ScreenShell,
+  StatusPill,
+  surfaceStyle,
+} from '../src/components/BlindInterface';
 
 export default function WhereAmIScreen() {
   const router = useRouter();
   const { language, isHighContrast } = useNavigationStore();
+  const theme = getInterfaceTheme(isHighContrast);
 
   const [nearestPoint, setNearestPoint] = useState<NavigationPoint | null>(null);
   const [distance, setDistance] = useState<number>(0);
-  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     const locateUser = async () => {
+      setLoading(true);
+      setError('');
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          VoiceService.speak(language === 'ar' ? 'عذراً، نحتاج صلاحية الموقع لتحديد مكانك.' : 'Location permission is required.');
+          const text = language === 'ar' ? 'نحتاج صلاحية الموقع لتحديد مكانك.' : 'Location permission is required.';
+          setError(text);
+          VoiceService.speak(text);
           return;
         }
 
-        let location = await Location.getCurrentPositionAsync({});
+        const location = await Location.getCurrentPositionAsync({});
         const coords = location.coords;
         const point = await NavigationService.getNearestPoint(coords.latitude, coords.longitude);
-      
-      if (!point) {
-        setNearestPoint(null);
-        VoiceService.speak(language === 'ar' ? 'تعذر الاتصال بقاعدة البيانات لتحديد الموقع.' : 'Failed to connect to database to determine location.');
-        return;
-      }
 
-      setNearestPoint(point);
+        if (!point) {
+          const text = language === 'ar' ? 'تعذر تحديد أقرب نقطة ملاحية.' : 'Could not identify the nearest navigation point.';
+          setError(text);
+          VoiceService.speak(text);
+          return;
+        }
 
-      let computedDistance = 0;
-      if (point.latitude && point.longitude) {
-        computedDistance = Math.round(NavigationService.getDistance(
-          coords.latitude,
-          coords.longitude,
-          point.latitude,
-          point.longitude
-        ));
-        setDistance(computedDistance);
-      }
+        setNearestPoint(point);
 
-      // Voice announcement
-      const name = language === 'ar' ? point.name_ar : point.name_en;
-      const desc = language === 'ar' ? point.description_ar : point.description_en;
-      
-      const vocalText = language === 'ar'
-        ? `أنت الآن بالقرب من: ${name}. تفاصيل الموقع: ${desc}. على بعد حوالي ${computedDistance} أمتار.`
-        : `You are currently near: ${name}. Location details: ${desc}. Approximately ${computedDistance} meters away.`;
-      
-      VoiceService.speak(vocalText);
+        let computedDistance = 0;
+        if (point.latitude && point.longitude) {
+          computedDistance = Math.round(NavigationService.getDistance(
+            coords.latitude,
+            coords.longitude,
+            point.latitude,
+            point.longitude
+          ));
+          setDistance(computedDistance);
+        }
+
+        const name = language === 'ar' ? point.name_ar : point.name_en;
+        const desc = language === 'ar' ? point.description_ar : point.description_en;
+        VoiceService.speak(
+          language === 'ar'
+            ? `أنت الآن بالقرب من ${name}. ${desc}. على بعد حوالي ${computedDistance} متر.`
+            : `You are currently near ${name}. ${desc}. Approximately ${computedDistance} meters away.`
+        );
       } catch (err) {
         console.error('Location error:', err);
-        VoiceService.speak(language === 'ar' ? 'تعذر جلب موقعك الحالي من نظام الـ GPS.' : 'Failed to retrieve your current GPS location.');
+        const text = language === 'ar' ? 'تعذر جلب موقعك الحالي.' : 'Failed to retrieve your current location.';
+        setError(text);
+        VoiceService.speak(text);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -70,189 +88,147 @@ export default function WhereAmIScreen() {
     if (nearestPoint) {
       router.push({
         pathname: '/details',
-        params: { pointId: nearestPoint.id }
+        params: { pointId: nearestPoint.id },
       });
     }
   };
 
-  const styles = getStyles(isHighContrast);
+  const repeatLocation = () => {
+    HapticsService.trigger('continue');
+    if (nearestPoint) {
+      const name = language === 'ar' ? nearestPoint.name_ar : nearestPoint.name_en;
+      VoiceService.speak(language === 'ar' ? `كرر الموقع: أنت بالقرب من ${name}` : `Location repeat: you are near ${name}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.accent} />
+        <Text style={[styles.loadingText, { color: theme.textMuted }]}>
+          {language === 'ar' ? 'جاري تحديد أقرب نقطة...' : 'Finding nearest point...'}
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.label}>
-          {language === 'ar' ? 'الموقع الحالي المقدر' : 'Estimated Current Location'}
-        </Text>
-        
-        {nearestPoint && (
-          <>
-            <Text style={styles.pointName} accessibilityRole="header">
-              📍 {language === 'ar' ? nearestPoint.name_ar : nearestPoint.name_en}
-            </Text>
-            
-            <Text style={styles.distanceIndicator}>
-              {language === 'ar' 
-                ? `على بعد ${distance} أمتار منك` 
-                : `${distance} meters away from you`}
-            </Text>
+    <ScreenShell highContrast={isHighContrast}>
+      <HeroPanel
+        theme={theme}
+        eyebrow={language === 'ar' ? 'تحديد الموقع' : 'Position lock'}
+        title={nearestPoint ? (language === 'ar' ? nearestPoint.name_ar : nearestPoint.name_en) : (language === 'ar' ? 'لم يتم تحديد الموقع' : 'Location unavailable')}
+        subtitle={
+          nearestPoint
+            ? (language === 'ar' ? nearestPoint.description_ar : nearestPoint.description_en)
+            : error
+        }
+        code="GPS"
+      />
 
-            <Text style={styles.description}>
-              {language === 'ar' ? nearestPoint.description_ar : nearestPoint.description_en}
-            </Text>
-            
-            <View style={styles.specs}>
-              <Text style={styles.specText}>
-                {language === 'ar' 
-                  ? `النوع: ${nearestPoint.type === 'intersection' ? 'تقاطع ممرات' : nearestPoint.type === 'restroom' ? 'دورة مياه' : 'مدخل كليات'}`
-                  : `Type: ${nearestPoint.type}`}
-              </Text>
-              <Text style={styles.specText}>
-                {language === 'ar'
-                  ? `التهيئة: ${nearestPoint.is_accessible ? 'مهيأة بالكامل' : 'غير مهيأة'}`
-                  : `Accessibility: ${nearestPoint.is_accessible ? 'Fully Accessible' : 'Standard'}`}
-              </Text>
+      {nearestPoint ? (
+        <>
+          <View style={styles.metricsRow}>
+            <MetricCard
+              theme={theme}
+              value={`${distance} ${language === 'ar' ? 'م' : 'm'}`}
+              label={language === 'ar' ? 'المسافة التقريبية' : 'Estimated distance'}
+            />
+            <MetricCard
+              theme={theme}
+              value={nearestPoint.is_accessible ? 'OK' : 'STD'}
+              label={language === 'ar' ? 'تهيئة الوصول' : 'Access status'}
+              tone={nearestPoint.is_accessible ? 'success' : 'warning'}
+            />
+          </View>
+
+          <View style={[styles.panel, surfaceStyle(theme)]}>
+            <View style={styles.statusRow}>
+              <StatusPill
+                theme={theme}
+                tone={nearestPoint.is_accessible ? 'success' : 'warning'}
+                text={nearestPoint.is_accessible ? (language === 'ar' ? 'نقطة مهيأة' : 'Accessible point') : (language === 'ar' ? 'نقطة عادية' : 'Standard point')}
+              />
+              <StatusPill theme={theme} text={nearestPoint.type.toUpperCase()} />
             </View>
-          </>
-        )}
-      </View>
+            <Text style={[styles.panelText, { color: theme.textMuted }]}>
+              {language === 'ar'
+                ? 'استخدم زر تكرار الصوت إذا احتجت سماع الموقع مرة أخرى، أو خطط مساراً من هذه النقطة.'
+                : 'Use repeat audio to hear this location again, or plan a route from this point.'}
+            </Text>
+          </View>
 
-      {/* Trigger Speech synthesis again */}
-      <TouchableOpacity
-        style={styles.actionBtn}
-        onPress={() => {
-          HapticsService.trigger('continue');
-          if (nearestPoint) {
-            const name = language === 'ar' ? nearestPoint.name_ar : nearestPoint.name_en;
-            VoiceService.speak(language === 'ar' ? `كرر الموقع: أنت عند ${name}` : `Location: you are at ${name}`);
-          }
-        }}
-        accessible={true}
-        accessibilityLabel={language === 'ar' ? 'كرر قراءة الموقع الحالي صوتيًا' : 'Repeat current location audio'}
-      >
-        <Text style={styles.actionBtnText}>🔊 {language === 'ar' ? 'أعد نطق الموقع' : 'Repeat Speech'}</Text>
-      </TouchableOpacity>
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'أعد نطق الموقع' : 'Repeat location audio'}
+            onPress={repeatLocation}
+            variant="secondary"
+            accessibilityLabel={language === 'ar' ? 'كرر قراءة الموقع الحالي صوتياً' : 'Repeat current location audio'}
+          />
 
-      {/* Nav to Details */}
-      <TouchableOpacity
-        style={[styles.actionBtn, styles.primaryActionBtn]}
-        onPress={handleRouteToClosest}
-        accessible={true}
-        accessibilityLabel={language === 'ar' ? 'اعرض خيارات الإرشاد لهذه النقطة' : 'Show routing parameters'}
-      >
-        <Text style={styles.actionBtnText}>🗺️ {language === 'ar' ? 'خطط مسار من هنا' : 'Plan Route from here'}</Text>
-      </TouchableOpacity>
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'خطط مساراً من هنا' : 'Plan route from here'}
+            onPress={handleRouteToClosest}
+            accessibilityLabel={language === 'ar' ? 'اعرض خيارات الإرشاد لهذه النقطة' : 'Show routing options for this point'}
+          />
+        </>
+      ) : (
+        <Text style={[styles.errorText, { color: theme.danger }]}>{error}</Text>
+      )}
 
-      {/* Emergency quick link */}
-      <TouchableOpacity
-        style={styles.sosBtn}
+      <PrimaryButton
+        theme={theme}
+        title={language === 'ar' ? 'طلب مساعدة طوارئ' : 'Request SOS help'}
         onPress={() => router.push('/emergency')}
-        accessible={true}
-        accessibilityLabel={language === 'ar' ? 'طوارئ عاجلة' : 'SOS Emergency'}
-      >
-        <Text style={styles.sosBtnText}>🚨 {language === 'ar' ? 'تحتاج لمساعدة؟ اطلب الطوارئ' : 'Need help? Request SOS'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        variant="danger"
+        accessibilityLabel={language === 'ar' ? 'طوارئ عاجلة' : 'Emergency SOS'}
+      />
+    </ScreenShell>
   );
 }
 
-const getStyles = (highContrast: boolean) => StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
-    padding: 20,
+const styles = StyleSheet.create({
+  centerContainer: {
+    flex: 1,
     justifyContent: 'center',
-  },
-  card: {
-    backgroundColor: '#1E272C',
-    borderRadius: 24,
+    alignItems: 'center',
     padding: 24,
-    borderWidth: 2,
-    borderColor: '#34495E',
-    marginBottom: 24,
   },
-  label: {
-    fontSize: 14,
-    color: '#FFFF00',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  pointName: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  distanceIndicator: {
-    fontSize: 18,
-    color: '#B0B0B0',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  description: {
-    fontSize: 16,
-    color: '#E0E0E0',
+  loadingText: {
+    fontSize: 17,
     lineHeight: 24,
+    fontWeight: '800',
+    marginTop: 16,
     textAlign: 'center',
-    marginBottom: 20,
   },
-  specs: {
-    borderTopWidth: 1,
-    borderTopColor: '#34495E',
-    paddingTop: 16,
+  metricsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    marginHorizontal: -5,
+    marginBottom: 14,
   },
-  specText: {
-    color: '#B0B0B0',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  actionBtn: {
-    backgroundColor: '#2C3E50',
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 12,
+  panel: {
     borderWidth: 1.5,
-    borderColor: '#34495E',
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 14,
   },
-  primaryActionBtn: {
-    backgroundColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    borderColor: highContrast ? '#FFFF00' : '#1A5F7A',
+  statusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
   },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  scenarioBtn: {
-    backgroundColor: '#2E3133',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#4A5054',
-    marginBottom: 24,
-  },
-  scenarioBtnText: {
-    color: '#FFFF00',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  sosBtn: {
-    backgroundColor: '#3C1F1F',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#C0392B',
-  },
-  sosBtnText: {
-    color: '#E74C3C',
+  panelText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    lineHeight: 24,
+    fontWeight: '700',
+  },
+  errorText: {
+    fontSize: 17,
+    lineHeight: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 18,
   },
 });

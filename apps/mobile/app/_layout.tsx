@@ -4,9 +4,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
+import { getInterfaceTheme } from '../src/components/BlindInterface';
 
 export default function RootLayout() {
   const { language, isHighContrast, isMuted, toggleMute } = useNavigationStore();
+  const theme = getInterfaceTheme(isHighContrast);
 
   useEffect(() => {
     // Set initial voice service configs
@@ -17,6 +19,9 @@ export default function RootLayout() {
     if (Platform.OS !== 'web') return;
 
     document.title = language === 'ar' ? 'بصيره | Baseera' : 'Baseera';
+    document.documentElement.style.backgroundColor = theme.background;
+    document.body.style.backgroundColor = theme.background;
+    document.body.style.margin = '0';
 
     const ensureHeadLink = (rel: string, href: string) => {
       if (document.querySelector(`link[rel="${rel}"][href="${href}"]`)) return;
@@ -40,7 +45,7 @@ export default function RootLayout() {
 
     ensureHeadLink('manifest', '/manifest.webmanifest');
     ensureHeadLink('apple-touch-icon', '/icons/icon-192.svg');
-    ensureMeta('theme-color', '#121212');
+    ensureMeta('theme-color', theme.background);
     ensureMeta('apple-mobile-web-app-capable', 'yes');
     ensureMeta('apple-mobile-web-app-title', 'Baseera');
     ensureMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
@@ -50,32 +55,40 @@ export default function RootLayout() {
         console.warn('[Baseera Mobile] Service worker registration failed:', error);
       });
     }
-  }, [language]);
+  }, [language, theme.background]);
 
   return (
     <>
       <StatusBar style={isHighContrast ? 'light' : 'auto'} />
-      <View style={styles.appFrame}>
+      <View style={[styles.appFrame, { backgroundColor: theme.background }]}>
         <Stack
           screenOptions={{
             headerStyle: {
-              backgroundColor: isHighContrast ? '#000000' : '#1A5F7A',
+              backgroundColor: theme.background,
             },
-            headerTintColor: '#FFFFFF',
+            headerTintColor: theme.text,
             headerTitleStyle: {
-              fontWeight: 'bold',
-              fontSize: 22,
+              fontWeight: '900',
+              fontSize: 20,
             },
             headerTitleAlign: 'center',
             animation: 'slide_from_right',
             headerRight: () => (
               <TouchableOpacity
                 onPress={toggleMute}
-                style={{ marginRight: 15 }}
+                style={[
+                  styles.muteButton,
+                  {
+                    borderColor: isMuted ? theme.danger : theme.border,
+                    backgroundColor: isMuted ? theme.dangerSurface : theme.surface,
+                  },
+                ]}
                 accessible={true}
                 accessibilityLabel={language === 'ar' ? (isMuted ? 'إلغاء كتم الصوت' : 'كتم الصوت') : (isMuted ? 'Unmute voice' : 'Mute voice')}
               >
-                <Text style={{ fontSize: 24 }}>{isMuted ? '🔇' : '🔊'}</Text>
+                <Text style={[styles.muteText, { color: isMuted ? theme.danger : theme.accent }]}>
+                  {isMuted ? (language === 'ar' ? 'كتم' : 'Mute') : (language === 'ar' ? 'صوت' : 'Voice')}
+                </Text>
               </TouchableOpacity>
             ),
           }}
@@ -103,8 +116,21 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     ...(Platform.OS === 'web' ? {
-      maxWidth: 900,
       minHeight: '100%',
     } : null),
+  },
+  muteButton: {
+    minWidth: 62,
+    minHeight: 36,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    paddingHorizontal: 10,
+  },
+  muteText: {
+    fontSize: 12,
+    fontWeight: '900',
   },
 });

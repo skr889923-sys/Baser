@@ -1,26 +1,36 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
+import {
+  ActionTile,
+  getInterfaceTheme,
+  HeroPanel,
+  PrimaryButton,
+  ScreenShell,
+  StatusPill,
+} from '../src/components/BlindInterface';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { 
-    language, 
-    setLanguage, 
-    isHighContrast, 
-    toggleHighContrast, 
-    routeTypePreference, 
-    setRoutePreference 
+  const {
+    language,
+    setLanguage,
+    isHighContrast,
+    toggleHighContrast,
+    routeTypePreference,
+    setRoutePreference,
+    isMuted,
   } = useNavigationStore();
+  const theme = getInterfaceTheme(isHighContrast);
 
   useEffect(() => {
     VoiceService.speak(
       language === 'ar'
-        ? 'شاشة الإعدادات. يمكنك تعديل خيارات اللغة والتباين وتفضيلات الملاحة، أو تفعيل اختبار الصوت والاهتزاز بالأسفل.'
-        : 'Settings screen. You can customize language, contrast, route choices, or trigger a test check below.'
+        ? 'شاشة الإعدادات. يمكنك تعديل اللغة، التباين، وتفضيل المسار، أو اختبار الصوت والاهتزاز.'
+        : 'Settings screen. You can change language, contrast, route preference, or test voice and haptics.'
     );
   }, [language]);
 
@@ -28,17 +38,16 @@ export default function SettingsScreen() {
     const nextLang = language === 'ar' ? 'en' : 'ar';
     setLanguage(nextLang);
     VoiceService.setVoiceLanguage(nextLang);
-    VoiceService.speak(
-      nextLang === 'ar' ? 'تم تحويل التطبيق للغة العربية' : 'Application switched to English'
-    );
+    VoiceService.speak(nextLang === 'ar' ? 'تم تحويل التطبيق للغة العربية' : 'Application switched to English');
   };
 
   const handleTestFeatures = () => {
     HapticsService.trigger('arrived');
-    const msg = language === 'ar' 
-      ? 'تم اختبار الصوت ونظام الاهتزاز بنجاح، التطبيق جاهز للعمل.' 
-      : 'Speech synthesis and haptics system tested successfully. The app is ready.';
-    VoiceService.speak(msg);
+    VoiceService.speak(
+      language === 'ar'
+        ? 'تم اختبار الصوت والاهتزاز بنجاح. التطبيق جاهز.'
+        : 'Speech and haptics tested successfully. The app is ready.'
+    );
   };
 
   const handleBack = () => {
@@ -46,173 +55,127 @@ export default function SettingsScreen() {
     router.replace('/home');
   };
 
-  const styles = getStyles(isHighContrast);
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* 1. Language Toggle */}
-      <View style={styles.settingCard}>
-        <Text style={styles.cardTitle}>{language === 'ar' ? 'لغة التطبيق:' : 'Application Language:'}</Text>
-        <TouchableOpacity
-          style={styles.toggleBtn}
-          onPress={toggleLanguage}
-          accessible={true}
-          accessibilityLabel={language === 'ar' ? 'لغة التطبيق الحالية: العربية. اضغط للتحويل إلى الإنجليزية' : 'Current language: English. Tap to switch to Arabic'}
-        >
-          <Text style={styles.toggleBtnText}>
-            🌐 {language === 'ar' ? 'العربية (اضغط للتحويل)' : 'English (Tap to switch)'}
-          </Text>
-        </TouchableOpacity>
+    <ScreenShell highContrast={isHighContrast}>
+      <HeroPanel
+        theme={theme}
+        eyebrow={language === 'ar' ? 'إعدادات الوصول' : 'Accessibility settings'}
+        title={language === 'ar' ? 'اضبط تجربة التوجيه' : 'Tune your guidance experience'}
+        subtitle={
+          language === 'ar'
+            ? 'اختر اللغة والتباين ونوع المسار بما يناسب طريقة استخدامك اليومية.'
+            : 'Choose language, contrast, and route behavior for your daily use.'
+        }
+        code="SET"
+      />
+
+      <View style={styles.statusRow}>
+        <StatusPill theme={theme} text={language === 'ar' ? 'العربية' : 'English'} />
+        <StatusPill theme={theme} tone={isHighContrast ? 'success' : 'normal'} text={isHighContrast ? (language === 'ar' ? 'تباين عال' : 'High contrast') : (language === 'ar' ? 'تباين عادي' : 'Standard contrast')} />
+        <StatusPill theme={theme} tone={isMuted ? 'danger' : 'success'} text={isMuted ? (language === 'ar' ? 'صامت' : 'Muted') : (language === 'ar' ? 'الصوت نشط' : 'Voice on')} />
       </View>
 
-      {/* 2. High Contrast Option */}
-      <View style={styles.settingCard}>
-        <Text style={styles.cardTitle}>{language === 'ar' ? 'وضع التباين العالي (Accessibility):' : 'High Contrast Mode:'}</Text>
-        <TouchableOpacity
-          style={[styles.toggleBtn, isHighContrast && styles.activeToggleBtn]}
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {language === 'ar' ? 'التشغيل' : 'Operation'}
+      </Text>
+
+      <ActionTile
+        title={language === 'ar' ? 'لغة التطبيق' : 'Application language'}
+        subtitle={language === 'ar' ? 'الحالية: العربية. اضغط للتحويل إلى الإنجليزية.' : 'Current: English. Tap to switch to Arabic.'}
+        label="LANG"
+        theme={theme}
+        compact
+        onPress={toggleLanguage}
+        accessibilityLabel={language === 'ar' ? 'لغة التطبيق الحالية العربية. اضغط للتحويل إلى الإنجليزية' : 'Current language English. Tap to switch to Arabic'}
+      />
+
+      <ActionTile
+        title={language === 'ar' ? 'التباين العالي' : 'High contrast'}
+        subtitle={isHighContrast ? (language === 'ar' ? 'نشط لتحسين وضوح النصوص والحدود.' : 'Enabled for clearer text and borders.') : (language === 'ar' ? 'اضغط لتفعيل ألوان عالية التباين.' : 'Tap to enable high contrast colors.')}
+        label="VIEW"
+        theme={theme}
+        selected={isHighContrast}
+        compact
+        onPress={() => {
+          toggleHighContrast();
+          HapticsService.trigger('continue');
+          VoiceService.speak(
+            language === 'ar'
+              ? `تم ${!isHighContrast ? 'تفعيل' : 'تعطيل'} وضع التباين العالي`
+              : `High contrast mode ${!isHighContrast ? 'enabled' : 'disabled'}`
+          );
+        }}
+        accessibilityLabel={language === 'ar' ? `وضع التباين العالي: ${isHighContrast ? 'نشط' : 'غير نشط'}` : `High contrast mode: ${isHighContrast ? 'On' : 'Off'}`}
+      />
+
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {language === 'ar' ? 'تفضيل المسار' : 'Route preference'}
+      </Text>
+
+      <View style={styles.preferenceGrid}>
+        <ActionTile
+          title={language === 'ar' ? 'مهيأ وآمن' : 'Accessible'}
+          subtitle={language === 'ar' ? 'يفضل المسارات المريحة للمكفوفين.' : 'Prioritizes blind-friendly paths.'}
+          label="SAFE"
+          theme={theme}
+          selected={routeTypePreference === 'safe_accessible'}
+          compact
           onPress={() => {
-            toggleHighContrast();
+            setRoutePreference('safe_accessible');
             HapticsService.trigger('continue');
-            VoiceService.speak(
-              language === 'ar'
-                ? `تم ${!isHighContrast ? 'تفعيل' : 'تعطيل'} وضع التباين العالي`
-                : `High contrast mode ${!isHighContrast ? 'enabled' : 'disabled'}`
-            );
+            VoiceService.speak(language === 'ar' ? 'تم تفضيل المسار الآمن والمهيأ' : 'Accessible route preference selected');
           }}
-          accessible={true}
-          accessibilityLabel={language === 'ar' ? `وضع التباين العالي: ${isHighContrast ? 'نشط' : 'غير نشط'}` : `High contrast mode: ${isHighContrast ? 'On' : 'Off'}`}
-        >
-          <Text style={styles.toggleBtnText}>
-            👁️ {isHighContrast ? (language === 'ar' ? 'تعطيل التباين العالي' : 'Disable High Contrast') : (language === 'ar' ? 'تفعيل التباين العالي' : 'Enable High Contrast')}
-          </Text>
-        </TouchableOpacity>
+          accessibilityLabel={language === 'ar' ? 'تفضيل مسار مهيأ وآمن' : 'Prefer accessible route'}
+        />
+        <ActionTile
+          title={language === 'ar' ? 'الأسرع' : 'Fastest'}
+          subtitle={language === 'ar' ? 'يقلل الزمن عند توفر مسار مناسب.' : 'Reduces time when a suitable route exists.'}
+          label="FAST"
+          theme={theme}
+          selected={routeTypePreference === 'fastest'}
+          compact
+          onPress={() => {
+            setRoutePreference('fastest');
+            HapticsService.trigger('continue');
+            VoiceService.speak(language === 'ar' ? 'تم تفضيل أسرع مسار' : 'Fastest route preference selected');
+          }}
+          accessibilityLabel={language === 'ar' ? 'تفضيل أسرع مسار' : 'Prefer fastest route'}
+        />
       </View>
 
-      {/* 3. Navigation Route Preference */}
-      <View style={styles.settingCard}>
-        <Text style={styles.cardTitle}>{language === 'ar' ? 'تفضيلات المسار الملاحي:' : 'Routing Preferences:'}</Text>
-        <View style={styles.row}>
-          {[
-            { key: 'safe_accessible', ar: 'مهيأ وآمن', en: 'Accessible' },
-            { key: 'fastest', ar: 'الأسرع', en: 'Fastest' }
-          ].map(opt => (
-            <TouchableOpacity
-              key={opt.key}
-              style={[styles.subBtn, routeTypePreference === opt.key && styles.activeSubBtn]}
-              onPress={() => {
-                setRoutePreference(opt.key as any);
-                HapticsService.trigger('continue');
-                VoiceService.speak(
-                  language === 'ar' ? `تم تفضيل المسار ${opt.ar}` : `Preferred route option: ${opt.en}`
-                );
-              }}
-              accessible={true}
-              accessibilityLabel={language === 'ar' ? `خيار المسار: ${opt.ar}` : `Routing choice: ${opt.en}`}
-            >
-              <Text style={styles.subBtnText}>
-                {language === 'ar' ? opt.ar : opt.en}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* 4. Test System Button */}
-      <TouchableOpacity
-        style={styles.testBtn}
+      <PrimaryButton
+        theme={theme}
+        title={language === 'ar' ? 'اختبر الصوت والاهتزاز' : 'Test speech and haptics'}
         onPress={handleTestFeatures}
-        accessible={true}
-        accessibilityLabel={language === 'ar' ? 'بدء اختبار الصوت والاهتزاز' : 'Test voice and haptics feedback'}
-      >
-        <Text style={styles.testBtnText}>🔔 {language === 'ar' ? 'اختبر الصوت والاهتزاز' : 'Test Speech & Haptics'}</Text>
-      </TouchableOpacity>
+        variant="secondary"
+        accessibilityLabel={language === 'ar' ? 'بدء اختبار الصوت والاهتزاز' : 'Test speech and haptics feedback'}
+      />
 
-      {/* Save & Close */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleBack}>
-        <Text style={styles.saveBtnText}>{language === 'ar' ? 'حفظ وإغلاق' : 'Save & Exit'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <PrimaryButton
+        theme={theme}
+        title={language === 'ar' ? 'حفظ وإغلاق' : 'Save and exit'}
+        onPress={handleBack}
+        accessibilityLabel={language === 'ar' ? 'حفظ الإعدادات والرجوع للرئيسية' : 'Save settings and return home'}
+      />
+    </ScreenShell>
   );
 }
 
-const getStyles = (highContrast: boolean) => StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
-    padding: 20,
-    justifyContent: 'center',
-  },
-  settingCard: {
-    backgroundColor: '#1E272C',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: '#34495E',
-  },
-  cardTitle: {
-    fontSize: 16,
-    color: '#B0B0B0',
-    marginBottom: 10,
-    fontWeight: 'bold',
-  },
-  toggleBtn: {
-    backgroundColor: '#2C3E50',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  activeToggleBtn: {
-    backgroundColor: highContrast ? '#1A5F7A' : '#1F8A70',
-  },
-  toggleBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  row: {
+const styles = StyleSheet.create({
+  statusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
   },
-  subBtn: {
-    flex: 1,
-    backgroundColor: '#2C3E50',
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-  activeSubBtn: {
-    backgroundColor: highContrast ? '#1A5F7A' : '#1F8A70',
-  },
-  subBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  testBtn: {
-    backgroundColor: '#2E3133',
-    paddingVertical: 18,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#4A5054',
-    marginBottom: 32,
-  },
-  testBtnText: {
-    color: '#FFFF00',
+  sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    marginBottom: 12,
+    marginTop: 4,
   },
-  saveBtn: {
-    backgroundColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    paddingVertical: 20,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  saveBtnText: {
-    color: highContrast ? '#000000' : '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
+  preferenceGrid: {
+    gap: 12,
+    marginBottom: 4,
   },
 });

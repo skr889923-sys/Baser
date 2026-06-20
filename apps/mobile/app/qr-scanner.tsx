@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigationStore } from '../src/store/useNavigationStore';
@@ -7,11 +7,20 @@ import SupabaseService from '../src/services/SupabaseService';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
 import { NavigationPoint } from '@baser/types';
+import {
+  getInterfaceTheme,
+  PrimaryButton,
+  ScreenShell,
+  SignalGlyph,
+  StatusPill,
+  surfaceStyle,
+} from '../src/components/BlindInterface';
 
 export default function QRScannerScreen() {
   const router = useRouter();
   const { language, isHighContrast } = useNavigationStore();
-  
+  const theme = getInterfaceTheme(isHighContrast);
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [scannedPoint, setScannedPoint] = useState<NavigationPoint | null>(null);
@@ -21,12 +30,12 @@ export default function QRScannerScreen() {
   useEffect(() => {
     VoiceService.speak(
       language === 'ar'
-        ? 'شاشة مسح الرموز. وجه الكاميرا نحو ملصق كيو أر الإرشادي، أو اضغط زر المحاكاة.'
-        : 'Scan QR tag screen. Point the camera at a guidance tag, or press the simulation button.'
+        ? 'شاشة مسح الرموز. وجه الكاميرا نحو ملصق بصيره لتحديد موقعك داخل المبنى.'
+        : 'QR scan screen. Point the camera at a Baseera tag to identify your indoor position.'
     );
   }, [language]);
 
-  const handleBarcodeScanned = async ({ type, data }: { type: string, data: string }) => {
+  const handleBarcodeScanned = async ({ data }: { type: string; data: string }) => {
     if (!scanning || loading) return;
     setScanning(false);
     setLoading(true);
@@ -34,63 +43,57 @@ export default function QRScannerScreen() {
     HapticsService.trigger('arrived');
 
     try {
-      // First, look up the QR code by its content string
       const qrCode = await SupabaseService.getQRCodeByContent(data);
       if (qrCode && qrCode.navigation_point_id) {
-        // Then, fetch the associated navigation point
         const point = await SupabaseService.getNavigationPointById(qrCode.navigation_point_id);
         if (point) {
           setScannedPoint(point);
           await SupabaseService.logQRScan(point.id);
-          
-          const welcomeSpeech = language === 'ar'
-            ? `تم التعرف على الموقع بنجاح. أنت الآن عند: ${point.name_ar}. ${point.audio_instruction_ar}`
-            : `Location identified successfully. You are currently at: ${point.name_en}. ${point.audio_instruction_en}`;
-          
-          VoiceService.speak(welcomeSpeech);
-          setLoading(false);
+
+          VoiceService.speak(
+            language === 'ar'
+              ? `تم التعرف على الموقع. أنت الآن عند ${point.name_ar}. ${point.audio_instruction_ar}`
+              : `Location identified. You are at ${point.name_en}. ${point.audio_instruction_en}`
+          );
           return;
         }
       }
-      
-      // If we reach here, the QR code wasn't recognized or linked
-      setErrorMsg(language === 'ar' ? 'عذراً، هذا الرمز غير مسجل في النظام.' : 'Sorry, this QR code is not registered.');
+
+      setErrorMsg(language === 'ar' ? 'هذا الرمز غير مسجل في النظام.' : 'This QR code is not registered.');
       VoiceService.speak(language === 'ar' ? 'هذا الرمز غير معروف' : 'Unknown QR code');
-      
     } catch (error) {
       console.error('Error scanning QR:', error);
-      setErrorMsg(language === 'ar' ? 'حدث خطأ أثناء المسح.' : 'Error occurred while scanning.');
+      setErrorMsg(language === 'ar' ? 'حدث خطأ أثناء المسح.' : 'Scanning failed.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Simulate scanning an available entrance point from the database
   const handleSimulateScan = async () => {
     if (!scanning || loading) return;
     setScanning(false);
     setLoading(true);
     setErrorMsg(null);
     HapticsService.trigger('arrived');
-    
+
     try {
       const points = await SupabaseService.getNavigationPoints();
       const point = points.find(p => p.type === 'entrance') || points[0];
-      
+
       if (point) {
         setScannedPoint(point);
         await SupabaseService.logQRScan(point.id);
-        
-        const welcomeSpeech = language === 'ar'
-          ? `تم مسح الرمز بنجاح. أنت الآن عند: ${point.name_ar}. ${point.audio_instruction_ar}. اختر أحد الخيارات المتاحة للمتابعة.`
-          : `Scan successful. You are currently at: ${point.name_en}. ${point.audio_instruction_en}. Choose an option to proceed.`;
-        
-        VoiceService.speak(welcomeSpeech);
+        VoiceService.speak(
+          language === 'ar'
+            ? `تم مسح الرمز بنجاح. أنت الآن عند ${point.name_ar}. اختر أحد الخيارات للمتابعة.`
+            : `Scan successful. You are at ${point.name_en}. Choose an option to continue.`
+        );
       } else {
         setErrorMsg(language === 'ar' ? 'لا توجد نقاط ملاحية متاحة للمحاكاة.' : 'No navigation points available for simulation.');
       }
     } catch (error) {
       console.error(error);
+      setErrorMsg(language === 'ar' ? 'تعذرت المحاكاة.' : 'Simulation failed.');
     } finally {
       setLoading(false);
     }
@@ -100,278 +103,228 @@ export default function QRScannerScreen() {
     setScannedPoint(null);
     setErrorMsg(null);
     setScanning(true);
-    VoiceService.speak(language === 'ar' ? 'جاهز للمسح مجددًا.' : 'Ready to scan again.');
+    VoiceService.speak(language === 'ar' ? 'جاهز للمسح مجدداً.' : 'Ready to scan again.');
   };
 
   const handleStartRoutingFromHere = () => {
     router.replace({
       pathname: '/destination',
-      params: { startPointId: scannedPoint?.id }
+      params: { startPointId: scannedPoint?.id },
     });
   };
 
-  const styles = getStyles(isHighContrast);
+  if (scanning) {
+    return (
+      <ScreenShell highContrast={isHighContrast}>
+        <View style={[styles.scanHeader, surfaceStyle(theme)]}>
+          <View style={styles.headerTop}>
+            <StatusPill theme={theme} tone="success" text={language === 'ar' ? 'جاهز للمسح' : 'Ready to scan'} />
+            <SignalGlyph label="QR" theme={theme} />
+          </View>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {language === 'ar' ? 'ثبّت الرمز داخل الإطار' : 'Keep the tag inside the frame'}
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+            {language === 'ar' ? 'سيتم نطق الموقع تلقائياً بعد التعرف على الملصق.' : 'The location will be spoken automatically after the tag is recognized.'}
+          </Text>
+        </View>
 
-  return (
-    <View style={styles.container}>
-      {scanning ? (
-        <View style={styles.scanContainer}>
+        <View style={[styles.cameraBox, { borderColor: errorMsg ? theme.danger : theme.border }]}>
           {permission?.granted ? (
-            <View style={styles.cameraBox}>
+            <>
               <CameraView
                 style={StyleSheet.absoluteFillObject}
                 facing="back"
                 onBarcodeScanned={loading ? undefined : handleBarcodeScanned}
-                barcodeScannerSettings={{
-                  barcodeTypes: ["qr"],
-                }}
+                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
               />
-              <View style={styles.aimer} />
-            </View>
+              <View style={[styles.aimer, { borderColor: theme.accent }]} />
+            </>
           ) : (
-            <View style={styles.cameraBox}>
-              <Text style={styles.cameraText}>
-                {!permission 
-                    ? (language === 'ar' ? 'جاري طلب صلاحية الكاميرا...' : 'Requesting camera permission...')
-                    : (language === 'ar' ? 'صلاحية الكاميرا مطلوبة لعملية المسح' : 'Camera permission required')
-                }
+            <View style={styles.permissionBox}>
+              <Text style={[styles.cameraText, { color: theme.textMuted }]}>
+                {!permission
+                  ? (language === 'ar' ? 'جاري التحقق من صلاحية الكاميرا...' : 'Checking camera permission...')
+                  : (language === 'ar' ? 'صلاحية الكاميرا مطلوبة للمسح.' : 'Camera permission is required for scanning.')}
               </Text>
-              {!permission?.granted && (
-                <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-                  <Text style={styles.permissionBtnText}>
-                    {language === 'ar' ? 'السماح بالكاميرا' : 'Grant Permission'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {!permission?.granted ? (
+                <PrimaryButton
+                  theme={theme}
+                  title={language === 'ar' ? 'السماح بالكاميرا' : 'Grant camera access'}
+                  onPress={requestPermission}
+                  accessibilityLabel={language === 'ar' ? 'السماح باستخدام الكاميرا' : 'Grant camera access'}
+                />
+              ) : null}
             </View>
           )}
+        </View>
 
-          {errorMsg && (
-            <Text style={styles.errorText}>{errorMsg}</Text>
-          )}
+        {errorMsg ? <Text style={[styles.errorText, { color: theme.danger }]}>{errorMsg}</Text> : null}
 
-          <TouchableOpacity
-            style={styles.simulateBtn}
-            onPress={handleSimulateScan}
-            accessible={true}
-            accessibilityLabel={language === 'ar' ? 'محاكاة مسح رمز مدخل كلية الحاسب' : 'Simulate scan of CS entrance tag'}
-            accessibilityHint="اضغط مرتين لتخطي المسح بالكاميرا وتجربة النتيجة"
-          >
-            <Text style={styles.simulateBtnText}>
-              {language === 'ar' ? '⚡ محاكاة مسح الرمز للمطورين' : '⚡ Simulate Scan (Dev)'}
-            </Text>
-          </TouchableOpacity>
+        <PrimaryButton
+          theme={theme}
+          title={language === 'ar' ? 'محاكاة مسح للتجربة' : 'Simulate scan for testing'}
+          onPress={handleSimulateScan}
+          variant="secondary"
+          accessibilityLabel={language === 'ar' ? 'محاكاة مسح رمز' : 'Simulate QR scan'}
+          accessibilityHint={language === 'ar' ? 'اضغط مرتين لتجربة نتيجة المسح بدون كاميرا' : 'Double tap to test scan result without camera'}
+        />
+      </ScreenShell>
+    );
+  }
+
+  return (
+    <ScreenShell highContrast={isHighContrast}>
+      {loading ? (
+        <View style={[styles.resultCard, surfaceStyle(theme)]}>
+          <ActivityIndicator size="large" color={theme.accent} />
+          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+            {language === 'ar' ? 'جاري تحليل الرمز...' : 'Analyzing tag...'}
+          </Text>
+        </View>
+      ) : scannedPoint ? (
+        <View style={[styles.resultCard, surfaceStyle(theme)]}>
+          <SignalGlyph label="OK" theme={theme} />
+          <Text style={[styles.successTitle, { color: theme.success }]}>
+            {language === 'ar' ? 'تم تحديد النقطة المرجعية' : 'Reference point identified'}
+          </Text>
+          <Text style={[styles.pointTitle, { color: theme.text }]}>
+            {language === 'ar' ? scannedPoint.name_ar : scannedPoint.name_en}
+          </Text>
+          <Text style={[styles.pointDetail, { color: theme.textMuted }]}>
+            {language === 'ar' ? scannedPoint.audio_instruction_ar : scannedPoint.audio_instruction_en}
+          </Text>
+
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'ابدأ توجيهاً من هنا' : 'Route from here'}
+            onPress={handleStartRoutingFromHere}
+            accessibilityLabel={language === 'ar' ? 'ابدأ توجيهاً من هذه النقطة' : 'Start navigation from this location'}
+          />
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'اختر وجهة أخرى' : 'Choose another destination'}
+            onPress={() => router.push('/destination')}
+            variant="secondary"
+            accessibilityLabel={language === 'ar' ? 'اختر وجهة جديدة' : 'Choose a new destination'}
+          />
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'إعادة المسح' : 'Scan again'}
+            onPress={handleReset}
+            variant="ghost"
+            accessibilityLabel={language === 'ar' ? 'امسح ملصقاً آخر' : 'Scan another tag'}
+          />
         </View>
       ) : (
-        <View style={styles.resultContainer}>
-          {loading ? (
-            <ActivityIndicator size="large" color="#1A5F7A" />
-          ) : (
-            scannedPoint ? (
-              <View style={styles.card}>
-                <Text style={styles.successEmoji}>🎯</Text>
-                <Text style={styles.successHeader}>
-                  {language === 'ar' ? 'تم التعرف على النقطة المرجعية!' : 'Reference point identified!'}
-                </Text>
-                
-                <Text style={styles.pointTitle}>
-                  {language === 'ar' ? scannedPoint.name_ar : scannedPoint.name_en}
-                </Text>
-                <Text style={styles.pointDetail}>
-                  {language === 'ar' ? scannedPoint.audio_instruction_ar : scannedPoint.audio_instruction_en}
-                </Text>
-
-                {/* Scanned Point Action Options */}
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={handleStartRoutingFromHere}
-                  accessible={true}
-                  accessibilityLabel={language === 'ar' ? 'ابدأ توجيهًا ملاحيًا من هذه النقطة' : 'Start navigation from this location'}
-                >
-                  <Text style={styles.actionBtnText}>🚀 {language === 'ar' ? 'ابدأ توجيهًا من هنا' : 'Route from here'}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.secondaryActionBtn]}
-                  onPress={() => router.push('/destination')}
-                  accessible={true}
-                  accessibilityLabel={language === 'ar' ? 'استكشف وجهات أخرى' : 'Explore other destinations'}
-                >
-                  <Text style={styles.actionBtnText}>🔍 {language === 'ar' ? 'اختر وجهة جديدة' : 'Choose destination'}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.resetBtn}
-                  onPress={handleReset}
-                  accessible={true}
-                  accessibilityLabel={language === 'ar' ? 'امسح ملصقًا آخر' : 'Scan another tag'}
-                >
-                  <Text style={styles.resetBtnText}>🔄 {language === 'ar' ? 'إعادة مسح' : 'Scan Again'}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.card}>
-                <Text style={styles.successEmoji}>❌</Text>
-                <Text style={styles.successHeader}>
-                  {errorMsg || (language === 'ar' ? 'فشل المسح' : 'Scan Failed')}
-                </Text>
-                <TouchableOpacity
-                  style={styles.resetBtn}
-                  onPress={handleReset}
-                >
-                  <Text style={styles.resetBtnText}>🔄 {language === 'ar' ? 'حاول مرة أخرى' : 'Try Again'}</Text>
-                </TouchableOpacity>
-              </View>
-            )
-          )}
+        <View style={[styles.resultCard, surfaceStyle(theme)]}>
+          <SignalGlyph label="ERR" theme={theme} danger />
+          <Text style={[styles.successTitle, { color: theme.danger }]}>
+            {errorMsg || (language === 'ar' ? 'فشل المسح' : 'Scan failed')}
+          </Text>
+          <PrimaryButton
+            theme={theme}
+            title={language === 'ar' ? 'حاول مرة أخرى' : 'Try again'}
+            onPress={handleReset}
+            variant="secondary"
+            accessibilityLabel={language === 'ar' ? 'حاول المسح مرة أخرى' : 'Try scanning again'}
+          />
         </View>
       )}
-    </View>
+    </ScreenShell>
   );
 }
 
-const getStyles = (highContrast: boolean) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
+const styles = StyleSheet.create({
+  scanHeader: {
+    borderWidth: 1.5,
+    borderRadius: 28,
     padding: 20,
-    justifyContent: 'center',
+    marginBottom: 14,
   },
-  scanContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
+    marginBottom: 18,
+  },
+  title: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900',
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '700',
+    marginTop: 10,
+    textAlign: 'center',
   },
   cameraBox: {
     width: '100%',
-    flex: 1,
-    maxHeight: 500,
-    backgroundColor: '#1C1C1E',
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: '#555',
+    height: 430,
+    backgroundColor: '#0b1114',
+    borderRadius: 28,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    marginBottom: 32,
+    marginBottom: 14,
     overflow: 'hidden',
   },
+  permissionBox: {
+    width: '100%',
+    padding: 18,
+    alignItems: 'center',
+  },
   cameraText: {
-    color: '#888',
     fontSize: 18,
-    fontWeight: 'bold',
+    lineHeight: 26,
+    fontWeight: '800',
     textAlign: 'center',
-    padding: 20,
-  },
-  permissionBtn: {
-    backgroundColor: '#1A5F7A',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  permissionBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 18,
   },
   aimer: {
-    width: 250,
-    height: 250,
-    borderColor: '#FFFF00',
+    width: 238,
+    height: 238,
     borderWidth: 3,
     borderStyle: 'dashed',
     position: 'absolute',
-    borderRadius: 20,
-  },
-  simulateBtn: {
-    backgroundColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    width: '100%',
-    paddingVertical: 22,
-    borderRadius: 18,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  simulateBtnText: {
-    color: highContrast ? '#000000' : '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+    borderRadius: 26,
   },
   errorText: {
-    color: '#FF4444',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    lineHeight: 24,
+    fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 16,
-  },
-  resultContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  card: {
-    backgroundColor: '#1E272C',
-    padding: 24,
-    borderRadius: 24,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#1A5F7A',
-  },
-  successEmoji: {
-    fontSize: 64,
     marginBottom: 12,
   },
-  successHeader: {
+  resultCard: {
+    borderWidth: 1.5,
+    borderRadius: 28,
+    padding: 22,
+    alignItems: 'center',
+  },
+  successTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4ADE80',
-    marginBottom: 16,
+    lineHeight: 30,
+    fontWeight: '900',
+    marginTop: 18,
+    marginBottom: 12,
     textAlign: 'center',
   },
   pointTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: 25,
+    lineHeight: 31,
+    fontWeight: '900',
     textAlign: 'center',
+    marginBottom: 10,
   },
   pointDetail: {
     fontSize: 16,
-    color: '#A0AAB2',
+    lineHeight: 25,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  actionBtn: {
-    backgroundColor: '#2E8B57',
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  secondaryActionBtn: {
-    backgroundColor: '#1A5F7A',
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  resetBtn: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#4A5054',
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  resetBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 22,
   },
 });

@@ -1,19 +1,27 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
+import {
+  ActionTile,
+  getInterfaceTheme,
+  HeroPanel,
+  PrimaryButton,
+  ScreenShell,
+  StatusPill,
+} from '../src/components/BlindInterface';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { language, setLanguage, isHighContrast } = useNavigationStore();
+  const { language, setLanguage, isHighContrast, isMuted } = useNavigationStore();
+  const theme = getInterfaceTheme(isHighContrast);
 
   useEffect(() => {
-    // Vocal welcome message when screen loads
     const timer = setTimeout(() => {
-      const welcomeMsg = language === 'ar' 
-      ? 'مرحبًا بك في تطبيق بصيره للملاحة الجامعية. اضغط في منتصف الشاشة لاختيار اللغة، أو اضغط أسفل الشاشة للبدء.'
-      : 'Welcome to Baseera campus navigation. Tap the middle to change language, or tap the bottom to start.';
+      const welcomeMsg = language === 'ar'
+        ? 'مرحباً بك في بصيره. واجهة صوتية مصممة للمكفوفين. اختر اللغة أو اضغط زر البدء للمتابعة.'
+        : 'Welcome to Baseera. A voice-first interface designed for blind users. Choose a language or press start to continue.';
       VoiceService.speak(welcomeMsg);
     }, 800);
     return () => clearTimeout(timer);
@@ -22,11 +30,7 @@ export default function WelcomeScreen() {
   const selectLanguage = (lang: 'ar' | 'en') => {
     setLanguage(lang);
     VoiceService.setVoiceLanguage(lang);
-    if (lang === 'ar') {
-      VoiceService.speak('تم تفعيل اللغة العربية');
-    } else {
-      VoiceService.speak('English language activated');
-    }
+    VoiceService.speak(lang === 'ar' ? 'تم تفعيل اللغة العربية' : 'English language activated');
   };
 
   const handleStart = () => {
@@ -34,139 +38,86 @@ export default function WelcomeScreen() {
     router.push('/permissions');
   };
 
-  const styles = getStyles(isHighContrast);
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title} accessibilityRole="header">
-          بصيره | Baseera
-        </Text>
-        <Text style={styles.subtitle}>
-          {language === 'ar' 
-            ? 'مساعدك الملاحي الصوتي الذكي داخل الحرم الجامعي' 
-            : 'Your smart audio navigation assistant on campus'}
-        </Text>
+    <ScreenShell highContrast={isHighContrast}>
+      <HeroPanel
+        theme={theme}
+        eyebrow={language === 'ar' ? 'ملاحة داخلية صوتية' : 'Voice indoor navigation'}
+        title={language === 'ar' ? 'بصيره ترى المكان بصوت واضح' : 'Baseera turns place into clear audio'}
+        subtitle={
+          language === 'ar'
+            ? 'مسح QR، تعليمات خطوة بخطوة، اهتزازات إرشادية، واستجابة طوارئ في واجهة واحدة.'
+            : 'QR anchors, turn-by-turn speech, haptic cues, and emergency response in one focused interface.'
+        }
+        code="A11Y"
+      />
 
-        <View style={styles.languageSection}>
-          <Text style={styles.sectionLabel} accessibilityLabel="اختر اللغة، Choose language">
-            {language === 'ar' ? 'اختر اللغة / Select Language' : 'Select Language / اختر اللغة'}
-          </Text>
-          <View style={styles.btnRow}>
-            <TouchableOpacity
-              style={[styles.langBtn, language === 'ar' && styles.activeLangBtn]}
-              onPress={() => selectLanguage('ar')}
-              accessible={true}
-              accessibilityLabel="اللغة العربية"
-              accessibilityHint="اضغط مرتين لتفعيل اللغة العربية"
-              accessibilityState={{ selected: language === 'ar' }}
-            >
-              <Text style={styles.langBtnText}>العربية</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.langBtn, language === 'en' && styles.activeLangBtn]}
-              onPress={() => selectLanguage('en')}
-              accessible={true}
-              accessibilityLabel="English Language"
-              accessibilityHint="Double tap to activate English language"
-              accessibilityState={{ selected: language === 'en' }}
-            >
-              <Text style={styles.langBtnText}>English</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.startBtn}
-          onPress={handleStart}
-          accessible={true}
-          accessibilityLabel={language === 'ar' ? 'ابدأ الاستخدام' : 'Start Application'}
-          accessibilityHint={language === 'ar' ? 'اضغط مرتين للانتقال إلى شاشة الصلاحيات' : 'Double tap to proceed to permissions screen'}
-        >
-          <Text style={styles.startBtnText}>
-            {language === 'ar' ? 'البدء' : 'Start'}
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.statusRow}>
+        <StatusPill
+          theme={theme}
+          tone={isMuted ? 'danger' : 'success'}
+          text={isMuted ? (language === 'ar' ? 'الصوت مكتوم' : 'Voice muted') : (language === 'ar' ? 'الصوت نشط' : 'Voice active')}
+        />
+        <StatusPill
+          theme={theme}
+          text={language === 'ar' ? 'جاهز للمسح' : 'Scan ready'}
+        />
       </View>
-    </ScrollView>
+
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        {language === 'ar' ? 'اختر لغة التشغيل' : 'Choose operating language'}
+      </Text>
+
+      <View style={styles.languageGrid}>
+        <ActionTile
+          title="العربية"
+          subtitle="توجيه صوتي عربي كامل"
+          label="AR"
+          theme={theme}
+          selected={language === 'ar'}
+          compact
+          onPress={() => selectLanguage('ar')}
+          accessibilityLabel="اللغة العربية"
+          accessibilityHint="اضغط مرتين لتفعيل اللغة العربية"
+        />
+        <ActionTile
+          title="English"
+          subtitle="Full English guidance"
+          label="EN"
+          theme={theme}
+          selected={language === 'en'}
+          compact
+          onPress={() => selectLanguage('en')}
+          accessibilityLabel="English Language"
+          accessibilityHint="Double tap to activate English"
+        />
+      </View>
+
+      <PrimaryButton
+        theme={theme}
+        title={language === 'ar' ? 'بدء تجربة بصيره' : 'Start Baseera'}
+        onPress={handleStart}
+        accessibilityLabel={language === 'ar' ? 'ابدأ استخدام تطبيق بصيره' : 'Start Baseera application'}
+        accessibilityHint={language === 'ar' ? 'اضغط مرتين للانتقال إلى شاشة الصلاحيات' : 'Double tap to proceed to permissions'}
+      />
+    </ScreenShell>
   );
 }
 
-const getStyles = (highContrast: boolean) => StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: highContrast ? '#000000' : '#121212',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  content: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: highContrast ? '#FFFF00' : '#1A5F7A',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 20,
-    color: '#E0E0E0',
-    textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 28,
-  },
-  languageSection: {
-    width: '100%',
-    marginBottom: 48,
-    alignItems: 'center',
-  },
-  sectionLabel: {
-    fontSize: 18,
-    color: '#B0B0B0',
-    marginBottom: 16,
-  },
-  btnRow: {
+const styles = StyleSheet.create({
+  statusRow: {
     flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 22,
   },
-  langBtn: {
-    flex: 1,
-    backgroundColor: '#2C3E50',
-    paddingVertical: 20,
-    marginHorizontal: 8,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#34495E',
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 12,
   },
-  activeLangBtn: {
-    borderColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    backgroundColor: highContrast ? '#1A5F7A' : '#1F8A70',
-  },
-  langBtnText: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  startBtn: {
-    width: '100%',
-    backgroundColor: highContrast ? '#FFFF00' : '#1A5F7A',
-    paddingVertical: 24,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-  },
-  startBtnText: {
-    color: highContrast ? '#000000' : '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
+  languageGrid: {
+    gap: 12,
+    marginBottom: 10,
   },
 });
