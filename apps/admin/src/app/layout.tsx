@@ -1,16 +1,38 @@
-import React from 'react';
-import './globals.css';
+'use client';
 
-export const metadata = {
-  title: 'بصيره | لوحة الإدارة الجامعية',
-  description: 'لوحة التحكم الإدارية لإدارة المباني، النقاط الملاحية، والمسارات لمساعدة ذوي الإعاقة البصرية.',
-};
+import React, { useEffect, useState } from 'react';
+import './globals.css';
+import { supabase } from '@/lib/supabase';
+
+// export const metadata = {
+//   title: 'بصيره | لوحة الإدارة الجامعية',
+//   description: 'لوحة التحكم الإدارية لإدارة المباني، النقاط الملاحية، والمسارات لمساعدة ذوي الإعاقة البصرية.',
+// };
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUser(data.user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
   return (
     <html lang="ar" dir="rtl">
       <body className="bg-slate-50 text-slate-900 min-h-screen flex">
@@ -73,11 +95,11 @@ export default function RootLayout({
           {/* User profile footer */}
           <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-sky-500 text-slate-950 flex items-center justify-center font-bold text-lg">
-              مه
+              {user?.email?.charAt(0).toUpperCase() || 'أ'}
             </div>
-            <div>
-              <p className="text-sm font-bold text-white">م. هشام أحمد</p>
-              <p className="text-xs text-slate-400">مدير النظام الرئيسي</p>
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold text-white truncate">{user?.email || 'مسؤول النظام'}</p>
+              <p className="text-xs text-slate-400">مدير النظام</p>
             </div>
           </div>
         </aside>
@@ -94,9 +116,9 @@ export default function RootLayout({
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 block animate-pulse"></span>
                 قاعدة بيانات Supabase متصلة
               </div>
-              <a href="/login" className="text-sm text-slate-600 hover:text-slate-900 font-bold transition-colors">
+              <button onClick={handleLogout} className="text-sm text-slate-600 hover:text-slate-900 font-bold transition-colors">
                 تسجيل الخروج 👤
-              </a>
+              </button>
             </div>
           </header>
 

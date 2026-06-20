@@ -1,39 +1,51 @@
 'use client';
 
-import React, { useState } from 'react';
-
-const INITIAL_USERS = [
-  { id: 'usr1', name: 'م. هشام أحمد', email: 'h.ahmad@ksu.edu.sa', role: 'super_admin', last_active: 'نشط الآن' },
-  { id: 'usr2', name: 'د. خالد سليمان', email: 'k.soliman@ksu.edu.sa', role: 'university_admin', last_active: 'منذ ساعة' },
-  { id: 'usr3', name: 'أ. فهد منصور', email: 'f.mansour@ksu.edu.sa', role: 'building_manager', last_active: 'منذ يومين' },
-  { id: 'usr4', name: 'سعد العتيبي', email: 's.otaibi@ksu.edu.sa', role: 'security_staff', last_active: 'منذ دقيقتين' }
-];
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('building_manager');
 
-  const handleAddUser = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (!error && data) {
+      setUsers(data);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) return;
 
+    // Notice: Due to security rules, actual user creation should ideally happen via Supabase Auth signup.
+    // For demo purposes, we will just insert into profiles here assuming Auth user was created.
     const newUser = {
-      id: 'usr_' + Math.random().toString(36).substring(7),
-      name,
+      id: crypto.randomUUID(), // Fallback UUID if no auth user
+      full_name: name,
       email,
       role,
       last_active: 'لم يسجل دخول بعد'
     };
 
-    setUsers([newUser, ...users]);
-    setShowAddForm(false);
-    
-    setName('');
-    setEmail('');
+    const { error } = await supabase.from('profiles').insert([newUser]);
+    if (!error) {
+      fetchUsers();
+      setShowAddForm(false);
+      setName('');
+      setEmail('');
+    } else {
+      console.error(error);
+      alert('حدث خطأ أثناء الإضافة: ' + error.message);
+    }
   };
 
   return (
@@ -66,10 +78,14 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {users.map(u => (
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-500">لا يوجد مستخدمين. يرجى إضافة مستخدمين أو التأكد من إضافتهم لجدول profiles في Supabase.</td>
+                  </tr>
+                ) : users.map((u: any) => (
                   <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4">
-                      <div className="font-bold text-slate-800">{u.name}</div>
+                      <div className="font-bold text-slate-800">{u.full_name || u.name || 'بدون اسم'}</div>
                       <div className="text-xs text-slate-400 font-semibold mt-1">{u.email}</div>
                     </td>
                     <td className="p-4">
@@ -85,10 +101,18 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="p-4 text-slate-500 font-medium">
-                      {u.last_active}
+                      {u.last_active || 'نشط'}
                     </td>
                     <td className="p-4">
-                      <button className="text-red-600 hover:text-red-800 font-bold text-xs">سحب الصلاحية ✕</button>
+                      <button 
+                        onClick={async () => {
+                          await supabase.from('profiles').delete().eq('id', u.id);
+                          fetchUsers();
+                        }}
+                        className="text-red-600 hover:text-red-800 font-bold text-xs"
+                      >
+                        سحب الصلاحية ✕
+                      </button>
                     </td>
                   </tr>
                 ))}

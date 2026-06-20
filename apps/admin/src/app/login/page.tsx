@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,20 +11,30 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Mock validation for demo
-    setTimeout(() => {
-      if (email.includes('@ksu.edu.sa') && password.length >= 6) {
-        router.push('/');
-      } else {
-        setError('خطأ في البريد الإلكتروني أو كلمة المرور. يرجى إدخال بريد جامعي صحيح وكلمة مرور من 6 خانات.');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError('خطأ في البريد الإلكتروني أو كلمة المرور. يرجى إدخال بيانات صحيحة.');
         setLoading(false);
+        return;
       }
-    }, 1000);
+
+      if (data.user) {
+        router.push('/');
+      }
+    } catch (err) {
+      setError('حدث خطأ أثناء الاتصال بالخادم.');
+      setLoading(false);
+    }
   };
 
   return (
