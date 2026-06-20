@@ -33,7 +33,7 @@ export default function UsersPage() {
       full_name: name,
       email,
       role,
-      last_active: 'لم يسجل دخول بعد'
+      phone: '' // Added phone to match schema if needed
     };
 
     const { error } = await supabase.from('profiles').insert([newUser]);
