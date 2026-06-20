@@ -20,12 +20,15 @@ export default function PointsPage() {
     building_id: '',
     name_ar: '',
     name_en: '',
-    point_type: 'corridor',
-    location_lat: 30.622971,
-    location_lng: 32.269073,
-    floor_level: 0,
+    type: 'corridor' as any,
+    latitude: 30.622971,
+    longitude: 32.269073,
+    description_ar: '',
+    description_en: '',
     audio_instruction_ar: '',
     audio_instruction_en: '',
+    is_accessible: true,
+    is_hazard: false,
     is_active: true
   });
 
@@ -64,7 +67,7 @@ export default function PointsPage() {
       setShowForm(false);
       setFormData({
         ...formData,
-        name_ar: '', name_en: '', audio_instruction_ar: '', audio_instruction_en: ''
+        name_ar: '', name_en: '', audio_instruction_ar: '', audio_instruction_en: '', description_ar: '', description_en: ''
       });
     } else {
       alert('حدث خطأ أثناء الحفظ');
@@ -104,7 +107,7 @@ export default function PointsPage() {
       {showForm && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
           <h2 className="text-xl font-bold mb-6">إضافة نقطة ملاحية</h2>
-          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">المبنى *</label>
               <select required value={formData.building_id} onChange={e => setFormData({...formData, building_id: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
@@ -114,49 +117,45 @@ export default function PointsPage() {
             </div>
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">نوع النقطة *</label>
-              <select required value={formData.point_type} onChange={e => setFormData({...formData, point_type: e.target.value as NavigationPoint['point_type']})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+              <select required value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as NavigationPoint['type']})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="entrance">مدخل / مخرج (Entrance)</option>
                 <option value="elevator">مصعد (Elevator)</option>
                 <option value="stairs">درج (Stairs)</option>
                 <option value="corridor">ممر (Corridor)</option>
-                <option value="room">غرفة / قاعة (Room)</option>
                 <option value="restroom">دورة مياه (Restroom)</option>
-                <option value="other">أخرى (Other)</option>
+                <option value="office">مكتب (Office)</option>
+                <option value="hall">قاعة (Hall)</option>
               </select>
-            </div>
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">الدور (الطابق) *</label>
-              <input type="number" required value={formData.floor_level} onChange={e => setFormData({...formData, floor_level: parseInt(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
 
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">اسم النقطة (عربي) *</label>
               <input required value={formData.name_ar} onChange={e => setFormData({...formData, name_ar: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">الوصف الصوتي (عربي) سيُنطق للمستخدم *</label>
-              <textarea required value={formData.audio_instruction_ar} onChange={e => setFormData({...formData, audio_instruction_ar: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" rows={2} placeholder="مثال: أنت الآن أمام الباب الرئيسي، المعمل على يمينك..." />
-            </div>
-
             <div className="md:col-span-1">
               <label className="block text-sm font-medium text-slate-700 mb-1">الاسم (إنجليزي) *</label>
               <input required value={formData.name_en} onChange={e => setFormData({...formData, name_en: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
+
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">الوصف الصوتي (إنجليزي)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">الوصف الصوتي (عربي) سيُنطق للمستخدم *</label>
+              <textarea required value={formData.audio_instruction_ar} onChange={e => setFormData({...formData, audio_instruction_ar: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" rows={2} placeholder="مثال: أنت الآن أمام الباب الرئيسي، المعمل على يمينك..." />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">الوصف الصوتي (إنجليزي) *</label>
               <textarea required value={formData.audio_instruction_en} onChange={e => setFormData({...formData, audio_instruction_en: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" rows={2} />
             </div>
 
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">خط العرض (Lat)</label>
-              <input type="number" step="any" required value={formData.location_lat} onChange={e => setFormData({...formData, location_lat: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">خط العرض (Lat) *</label>
+              <input type="number" step="any" required value={formData.latitude} onChange={e => setFormData({...formData, latitude: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">خط الطول (Lng)</label>
-              <input type="number" step="any" required value={formData.location_lng} onChange={e => setFormData({...formData, location_lng: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">خط الطول (Lng) *</label>
+              <input type="number" step="any" required value={formData.longitude} onChange={e => setFormData({...formData, longitude: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             
-            <div className="md:col-span-3 flex justify-end gap-3 mt-4 border-t pt-6">
+            <div className="md:col-span-2 flex justify-end gap-3 mt-4 border-t pt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">إلغاء</button>
               <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50">
                 {saving ? 'جاري الحفظ...' : 'حفظ النقطة الملاحية'}
@@ -185,7 +184,7 @@ export default function PointsPage() {
             <thead className="bg-white border-b border-slate-200 text-slate-500 font-medium text-sm">
               <tr>
                 <th className="p-4">الاسم والنوع</th>
-                <th className="p-4">المبنى / الدور</th>
+                <th className="p-4">المبنى</th>
                 <th className="p-4 w-1/3">الوصف الصوتي (عربي)</th>
                 <th className="p-4 text-center">الحالة</th>
                 <th className="p-4 text-center">الإجراءات</th>
@@ -201,11 +200,10 @@ export default function PointsPage() {
                   <tr key={point.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
                       <div className="font-bold text-slate-800">{point.name_ar}</div>
-                      <div className="text-xs text-indigo-600 font-bold uppercase mt-1 px-2 py-0.5 bg-indigo-50 inline-block rounded-md">{point.point_type}</div>
+                      <div className="text-xs text-indigo-600 font-bold uppercase mt-1 px-2 py-0.5 bg-indigo-50 inline-block rounded-md">{point.type}</div>
                     </td>
                     <td className="p-4">
                       <div className="text-slate-800">{point.building?.name_ar || 'غير محدد'}</div>
-                      <div className="text-slate-500 text-sm">الدور: {point.floor_level}</div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-start gap-2">

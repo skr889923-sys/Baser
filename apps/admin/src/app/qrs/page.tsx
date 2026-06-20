@@ -116,7 +116,7 @@ export default function QRsPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">النقطة الملاحية *</label>
               <select required value={formData.navigation_point_id} onChange={e => setFormData({...formData, navigation_point_id: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="">اختر النقطة...</option>
-                {points.map(p => <option key={p.id} value={p.id}>{p.name_ar} - الدور {p.floor_level}</option>)}
+                {points.map(p => <option key={p.id} value={p.id}>{p.name_ar}</option>)}
               </select>
             </div>
             

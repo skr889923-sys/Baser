@@ -17,8 +17,10 @@ export default function BuildingsPage() {
     name_en: '',
     description_ar: '',
     description_en: '',
-    location_lat: 30.622971,
-    location_lng: 32.269073,
+    latitude: 30.622971,
+    longitude: 32.269073,
+    type: 'college' as any,
+    is_accessible: true,
     is_active: true
   });
 
@@ -47,8 +49,10 @@ export default function BuildingsPage() {
         name_en: '',
         description_ar: '',
         description_en: '',
-        location_lat: 30.622971,
-        location_lng: 32.269073,
+        latitude: 30.622971,
+        longitude: 32.269073,
+        type: 'college',
+        is_accessible: true,
         is_active: true
       });
     } else {
@@ -115,11 +119,11 @@ export default function BuildingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">خط العرض (Latitude) *</label>
-              <input type="number" step="any" required value={formData.location_lat} onChange={e => setFormData({...formData, location_lat: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-sky-500" />
+              <input type="number" step="any" required value={formData.latitude} onChange={e => setFormData({...formData, latitude: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-sky-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">خط الطول (Longitude) *</label>
-              <input type="number" step="any" required value={formData.location_lng} onChange={e => setFormData({...formData, location_lng: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-sky-500" />
+              <input type="number" step="any" required value={formData.longitude} onChange={e => setFormData({...formData, longitude: parseFloat(e.target.value)})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-sky-500" />
             </div>
             <div className="col-span-2 flex justify-end gap-3 mt-4">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">إلغاء</button>
@@ -154,7 +158,7 @@ export default function BuildingsPage() {
                     <td className="p-4 font-bold text-slate-800">{building.name_ar}</td>
                     <td className="p-4 text-slate-600">{building.name_en}</td>
                     <td className="p-4 text-slate-500 text-sm font-mono" dir="ltr">
-                      {building.location_lat.toFixed(5)}, {building.location_lng.toFixed(5)}
+                      {building.latitude?.toFixed(5)}, {building.longitude?.toFixed(5)}
                     </td>
                     <td className="p-4 text-center">
                       <button 
