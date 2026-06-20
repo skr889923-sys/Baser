@@ -87,6 +87,9 @@ export default function RootLayout({
             </a>
 
             <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">الإدارة</div>
+            <a href="/voices" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors text-slate-200 hover:text-white font-medium">
+              <span>🎙️</span> التعليق الصوتي
+            </a>
             <a href="/users" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors text-slate-200 hover:text-white font-medium">
               <span>👥</span> الصلاحيات والمستخدمين
             </a>
@@ -109,7 +112,7 @@ export default function RootLayout({
           {/* Top Bar */}
           <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 shadow-sm">
             <h2 className="text-lg font-bold text-slate-800">
-              جامعة الملك سعود - إدارة الوصول والتهيئة الملاحية
+              جامعة قناة السويس
             </h2>
             <div className="flex items-center gap-4">
               <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 border border-green-200">
