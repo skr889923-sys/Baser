@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Dallni",
+    "slug": "dallni",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dallni.app"
+    },
+    "android": {
+      "package": "com.dallni.app"
+    },
+    "web": {},
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Dallni to use your location for precise indoor navigation."
+        }
+      ]
+    ],
+    "scheme": "dallni"
+  }
+}
