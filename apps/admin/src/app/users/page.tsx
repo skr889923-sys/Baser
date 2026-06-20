@@ -130,14 +130,14 @@ export default function UsersPage() {
 
             <form onSubmit={handleAddUser} className="space-y-4">
               {/* Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">الاسم الكامل</label>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 block">الاسم الكامل</label>
                 <input 
                   type="text" 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-500 font-semibold"
-                  placeholder="مثال: م. فهد المقرن"
+                  placeholder="مثال: أ.رغد" 
+                  className="w-full border-slate-200 rounded-xl p-4 text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#00A651]/20 focus:border-[#00A651] transition-all"
                   value={name}
-                  onChange={e => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
