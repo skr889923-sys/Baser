@@ -197,27 +197,29 @@ export default function MapEditorMap() {
     return [];
   };
 
+  const hasVisibleEditorPanel = mode === 'add_route' || Boolean(newPointLocation);
+
   return (
-    <div className="flex flex-col h-full w-full relative">
+    <div className="flex flex-col h-full min-h-0 w-full relative">
       {/* Top Bar for Mode Switching */}
-      <div className="bg-white p-3 border-b flex justify-center gap-4 z-[1000] shadow-sm">
+      <div className="bg-white p-3 border-b flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 z-[1000] shadow-sm">
         <button 
           onClick={() => { setMode('add_point'); cancelRoute(); setNewPointLocation(null); }}
-          className={`px-6 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'add_point' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          className={`w-full sm:w-auto px-4 sm:px-6 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'add_point' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           📍 وضع إضافة النقاط
         </button>
         <button 
           onClick={() => { setMode('add_route'); cancelRoute(); setNewPointLocation(null); }}
-          className={`px-6 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'add_route' ? 'bg-amber-500 text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          className={`w-full sm:w-auto px-4 sm:px-6 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'add_route' ? 'bg-amber-500 text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           🛣️ وضع رسم المسارات
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row relative overflow-visible md:overflow-hidden">
         {/* Map Area */}
-        <div className="flex-1 min-h-[50vh] relative z-0">
+        <div className={`${hasVisibleEditorPanel ? 'h-[32dvh] min-h-[13rem]' : 'h-[46dvh] min-h-[18rem]'} md:h-auto md:flex-1 md:min-h-0 relative z-0 overflow-hidden`}>
           <MapContainer center={SUEZ_CANAL_UNIV_CENTER} zoom={18} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               attribution='&copy; OpenStreetMap contributors'
@@ -282,12 +284,12 @@ export default function MapEditorMap() {
 
         {/* Sidebar: Add Point Form */}
         {mode === 'add_point' && newPointLocation && (
-          <div className="w-full md:w-96 bg-white border-t md:border-t-0 md:border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0">
+          <div className="w-full md:w-96 bg-white border-t md:border-t-0 md:border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0 md:h-full">
             <div className="p-5 border-b border-slate-100 shrink-0 bg-slate-50">
               <h2 className="text-xl font-bold text-slate-800">📍 إضافة نقطة جديدة</h2>
             </div>
             
-            <div className="p-5 overflow-y-auto flex-1 flex flex-col">
+            <div className="p-5 overflow-visible md:overflow-y-auto md:flex-1 flex flex-col">
               <label className="mb-2 text-sm font-bold text-slate-600">الاسم بالعربية</label>
               <input 
                 type="text" 
@@ -337,12 +339,12 @@ export default function MapEditorMap() {
 
         {/* Sidebar: Add Route Form */}
         {mode === 'add_route' && (
-          <div className="w-full md:w-96 bg-white border-t md:border-t-0 md:border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0">
+          <div className="w-full md:w-96 bg-white border-t md:border-t-0 md:border-r border-slate-200 shadow-xl z-10 flex flex-col shrink-0 md:h-full">
             <div className="p-5 border-b border-slate-100 shrink-0 bg-slate-50">
               <h2 className="text-xl font-bold text-slate-800">🛣️ رسم مسار جديد</h2>
             </div>
             
-            <div className="p-5 overflow-y-auto flex-1 flex flex-col">
+            <div className="p-5 overflow-visible md:overflow-y-auto md:flex-1 flex flex-col">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 shrink-0">
                 <div className="mb-3">
                   <span className="block text-xs font-bold text-slate-500 mb-1">نقطة البداية (أ):</span>

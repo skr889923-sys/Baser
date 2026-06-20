@@ -246,7 +246,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                   {currentPage?.label || 'لوحة التحكم'}
                 </h1>
                 <p className="hidden sm:block text-xs text-slate-500 font-semibold truncate">
-                  جامعة قناة السويس
+                  جامعة قناة السويس | فكرة وتنفيذ: أ. رغد
                 </p>
               </div>
             </div>
