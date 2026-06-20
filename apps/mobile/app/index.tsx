@@ -11,12 +11,13 @@ export default function WelcomeScreen() {
   useEffect(() => {
     // Vocal welcome message when screen loads
     const timer = setTimeout(() => {
-      VoiceService.speak(
-        'مرحبًا بك في تطبيق بصير للملاحة الجامعية. اضغط في منتصف الشاشة لاختيار اللغة، أو اضغط أسفل الشاشة للبدء.'
-      );
+      const welcomeMsg = language === 'ar' 
+      ? 'مرحبًا بك في تطبيق بصيره للملاحة الجامعية. اضغط في منتصف الشاشة لاختيار اللغة، أو اضغط أسفل الشاشة للبدء.'
+      : 'Welcome to Baseera campus navigation. Tap the middle to change language, or tap the bottom to start.';
+      VoiceService.speak(welcomeMsg);
     }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [language]);
 
   const selectLanguage = (lang: 'ar' | 'en') => {
     setLanguage(lang);
@@ -39,7 +40,7 @@ export default function WelcomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title} accessibilityRole="header">
-          بصير | Baser
+          بصيره | Baseera
         </Text>
         <Text style={styles.subtitle}>
           {language === 'ar' 

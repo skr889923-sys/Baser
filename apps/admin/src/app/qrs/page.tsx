@@ -76,7 +76,7 @@ export default function QRsPage() {
         <html dir="rtl">
           <head><title>طباعة رمز QR</title></head>
           <body style="display:flex; justify-content:center; align-items:center; height:100vh; margin:0; flex-direction:column; font-family: sans-serif;">
-            <h1 style="margin-bottom: 20px;">نظام بصير</h1>
+            <h1 style="margin-bottom: 20px;">نظام بصيره</h1>
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(content)}" alt="QR Code" />
             <p style="margin-top: 20px; font-size: 14px; color: #666;">${content}</p>
             <script>window.onload = function() { window.print(); window.close(); }</script>

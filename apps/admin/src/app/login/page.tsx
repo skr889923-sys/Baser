@@ -34,7 +34,7 @@ export default function LoginPage() {
         {/* Header branding */}
         <div className="text-center space-y-3">
           <span className="text-5xl block animate-bounce">🧭</span>
-          <h1 className="text-2xl font-black text-white tracking-tight">بصير | Baser</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">بصيره | Baseera</h1>
           <p className="text-sm text-slate-400">لوحة التحكم في التهيئة والوصول الملاحي للحرم الجامعي</p>
         </div>
 

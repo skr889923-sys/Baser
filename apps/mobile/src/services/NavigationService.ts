@@ -136,8 +136,8 @@ class NavigationService {
 
   public async announceArrival(isAr: boolean = true): Promise<void> {
     const text = isAr 
-      ? 'لقد وصلت إلى وجهتك بأمان. شكراً لاستخدامك تطبيق بصير.' 
-      : 'You have successfully arrived at your destination. Thank you for using Baser.';
+      ? 'لقد وصلت إلى وجهتك بأمان. شكراً لاستخدامك تطبيق بصيره.' 
+      : 'You have successfully arrived at your destination. Thank you for using Baseera.';
     
     await HapticsService.trigger('arrived');
     await VoiceService.speak(text);

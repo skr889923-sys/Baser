@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
+import { TouchableOpacity, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
 
 export default function RootLayout() {
-  const { language, isHighContrast } = useNavigationStore();
+  const { language, isHighContrast, isMuted, toggleMute } = useNavigationStore();
 
   useEffect(() => {
     // Set initial voice service configs
@@ -27,6 +28,16 @@ export default function RootLayout() {
           },
           headerTitleAlign: 'center',
           animation: 'slide_from_right',
+          headerRight: () => (
+            <TouchableOpacity 
+              onPress={toggleMute}
+              style={{ marginRight: 15 }}
+              accessible={true}
+              accessibilityLabel={language === 'ar' ? (isMuted ? 'إلغاء كتم الصوت' : 'كتم الصوت') : (isMuted ? 'Unmute voice' : 'Mute voice')}
+            >
+              <Text style={{ fontSize: 24 }}>{isMuted ? '🔇' : '🔊'}</Text>
+            </TouchableOpacity>
+          ),
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />

@@ -5,9 +5,12 @@ class VoiceService {
   private lastSpokenText: string = '';
   private rate: number = 0.9; // Slightly slower for better clarity
   private language: 'ar' | 'en' = 'ar';
+  private isMuted: boolean = false;
 
   public async speak(text: string, forceLanguage?: 'ar' | 'en'): Promise<void> {
     this.lastSpokenText = text;
+    if (this.isMuted) return; // Do not speak if muted
+
     const langCode = forceLanguage || this.language === 'ar' ? 'ar-SA' : 'en-US';
 
     console.log(`[VoiceService] Speaking: "${text}" (${langCode})`);
@@ -61,6 +64,20 @@ class VoiceService {
 
   public setSpeechRate(rate: number): void {
     this.rate = Math.max(0.5, Math.min(2.0, rate));
+  }
+
+  public toggleMute(): boolean {
+    this.isMuted = !this.isMuted;
+    if (this.isMuted) {
+      this.stop();
+    } else {
+      this.speak(this.language === 'ar' ? 'تم تفعيل الصوت' : 'Voice enabled');
+    }
+    return this.isMuted;
+  }
+
+  public getIsMuted(): boolean {
+    return this.isMuted;
   }
 
   public setVoiceLanguage(lang: 'ar' | 'en'): void {

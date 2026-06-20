@@ -13,6 +13,7 @@ interface NavigationState {
   language: 'ar' | 'en';
   routeTypePreference: 'fastest' | 'safe_accessible' | 'wheelchair' | 'blind_friendly';
   isHighContrast: boolean;
+  isMuted: boolean;
 
   setCurrentLocation: (lat: number, lon: number) => void;
   startNavigation: (route: Route, steps: RouteStep[], destination: NavigationPoint) => void;
@@ -23,6 +24,7 @@ interface NavigationState {
   setLanguage: (lang: 'ar' | 'en') => void;
   setRoutePreference: (pref: 'fastest' | 'safe_accessible' | 'wheelchair' | 'blind_friendly') => void;
   toggleHighContrast: () => void;
+  toggleMute: () => void;
 }
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
@@ -36,6 +38,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   language: 'ar',
   routeTypePreference: 'safe_accessible',
   isHighContrast: false,
+  isMuted: false,
 
   setCurrentLocation: (latitude, longitude) => set({ currentLocation: { latitude, longitude } }),
 
@@ -106,4 +109,8 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   setLanguage: (language) => set({ language }),
   setRoutePreference: (routeTypePreference) => set({ routeTypePreference }),
   toggleHighContrast: () => set(state => ({ isHighContrast: !state.isHighContrast })),
+  toggleMute: () => {
+    const isMutedNow = VoiceService.toggleMute();
+    set({ isMuted: isMutedNow });
+  },
 }));

@@ -2,7 +2,7 @@ import React from 'react';
 import './globals.css';
 
 export const metadata = {
-  title: 'بصير | لوحة الإدارة الجامعية',
+  title: 'بصيره | لوحة الإدارة الجامعية',
   description: 'لوحة التحكم الإدارية لإدارة المباني، النقاط الملاحية، والمسارات لمساعدة ذوي الإعاقة البصرية.',
 };
 
@@ -21,7 +21,7 @@ export default function RootLayout({
             <div className="flex items-center gap-3">
               <span className="text-3xl">🧭</span>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">بصير | Baser</h1>
+                <h1 className="text-xl font-bold tracking-tight text-white">بصيره | Baseera</h1>
                 <p className="text-xs text-sky-400 font-semibold">نظام الملاحة الذكي للحرم</p>
               </div>
             </div>
