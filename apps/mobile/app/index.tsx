@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
@@ -9,6 +9,7 @@ import {
   HeroPanel,
   PrimaryButton,
   ScreenShell,
+  SectionHeader,
   StatusPill,
 } from '../src/components/BlindInterface';
 
@@ -42,14 +43,14 @@ export default function WelcomeScreen() {
     <ScreenShell highContrast={isHighContrast}>
       <HeroPanel
         theme={theme}
-        eyebrow={language === 'ar' ? 'ملاحة داخلية صوتية' : 'Voice indoor navigation'}
-        title={language === 'ar' ? 'بصيره ترى المكان بصوت واضح' : 'Baseera turns place into clear audio'}
+        eyebrow={language === 'ar' ? 'ملاحة تُسمع وتُحس' : 'Navigation you can hear and feel'}
+        title={language === 'ar' ? 'المكان أوضح عندما ينطق' : 'A clearer place, spoken aloud'}
         subtitle={
           language === 'ar'
-            ? 'مسح QR، تعليمات خطوة بخطوة، اهتزازات إرشادية، واستجابة طوارئ في واجهة واحدة.'
-            : 'QR anchors, turn-by-turn speech, haptic cues, and emergency response in one focused interface.'
+            ? 'بصيره يحوّل نقاط المكان إلى تعليمات صوتية ولمسية مختصرة، من المدخل حتى الوجهة.'
+            : 'Baseera turns place anchors into concise spoken and haptic guidance, from entrance to destination.'
         }
-        code="A11Y"
+        code="B01"
       />
 
       <View style={styles.statusRow}>
@@ -60,42 +61,48 @@ export default function WelcomeScreen() {
         />
         <StatusPill
           theme={theme}
-          text={language === 'ar' ? 'جاهز للمسح' : 'Scan ready'}
+          text={language === 'ar' ? 'عربي / English' : 'Arabic / English'}
         />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        {language === 'ar' ? 'اختر لغة التشغيل' : 'Choose operating language'}
-      </Text>
+      <SectionHeader
+        theme={theme}
+        eyebrow={language === 'ar' ? 'الإعداد الأول' : 'First setup'}
+        title={language === 'ar' ? 'اختر لغة الإرشاد' : 'Choose guidance language'}
+      />
 
       <View style={styles.languageGrid}>
-        <ActionTile
-          title="العربية"
-          subtitle="توجيه صوتي عربي كامل"
-          label="AR"
-          theme={theme}
-          selected={language === 'ar'}
-          compact
-          onPress={() => selectLanguage('ar')}
-          accessibilityLabel="اللغة العربية"
-          accessibilityHint="اضغط مرتين لتفعيل اللغة العربية"
-        />
-        <ActionTile
-          title="English"
-          subtitle="Full English guidance"
-          label="EN"
-          theme={theme}
-          selected={language === 'en'}
-          compact
-          onPress={() => selectLanguage('en')}
-          accessibilityLabel="English Language"
-          accessibilityHint="Double tap to activate English"
-        />
+        <View style={styles.languageCell}>
+          <ActionTile
+            title="العربية"
+            subtitle="صوت وتعليمات عربية"
+            label="AR"
+            theme={theme}
+            selected={language === 'ar'}
+            compact
+            onPress={() => selectLanguage('ar')}
+            accessibilityLabel="اللغة العربية"
+            accessibilityHint="اضغط مرتين لتفعيل اللغة العربية"
+          />
+        </View>
+        <View style={styles.languageCell}>
+          <ActionTile
+            title="English"
+            subtitle="Spoken English guidance"
+            label="EN"
+            theme={theme}
+            selected={language === 'en'}
+            compact
+            onPress={() => selectLanguage('en')}
+            accessibilityLabel="English Language"
+            accessibilityHint="Double tap to activate English"
+          />
+        </View>
       </View>
 
       <PrimaryButton
         theme={theme}
-        title={language === 'ar' ? 'بدء تجربة بصيره' : 'Start Baseera'}
+        title={language === 'ar' ? 'ابدأ الإعداد' : 'Start setup'}
         onPress={handleStart}
         accessibilityLabel={language === 'ar' ? 'ابدأ استخدام تطبيق بصيره' : 'Start Baseera application'}
         accessibilityHint={language === 'ar' ? 'اضغط مرتين للانتقال إلى شاشة الصلاحيات' : 'Double tap to proceed to permissions'}
@@ -111,13 +118,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 22,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '900',
+  languageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 12,
   },
-  languageGrid: {
-    gap: 12,
-    marginBottom: 10,
+  languageCell: {
+    flexGrow: 1,
+    flexBasis: 160,
+    minWidth: 150,
   },
 });

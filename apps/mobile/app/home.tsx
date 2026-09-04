@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import VoiceService from '../src/services/VoiceService';
@@ -9,6 +9,7 @@ import {
   getInterfaceTheme,
   HeroPanel,
   ScreenShell,
+  SectionHeader,
   StatusPill,
 } from '../src/components/BlindInterface';
 
@@ -32,17 +33,7 @@ export default function HomeScreen() {
     router.push(path);
   };
 
-  const actions = [
-    {
-      path: '/destination' as RoutePath,
-      label: 'GO',
-      ar: 'اختر وجهتك',
-      en: 'Select destination',
-      descAr: 'ابحث عن قاعة أو مكتب أو مرفق وابدأ مسارك الصوتي.',
-      descEn: 'Find a room, office, or facility and start audio routing.',
-      hintAr: 'اضغط مرتين لفتح قائمة الوجهات',
-      hintEn: 'Double tap to open destination search',
-    },
+  const quickActions = [
     {
       path: '/qr-scanner' as RoutePath,
       label: 'QR',
@@ -63,6 +54,9 @@ export default function HomeScreen() {
       hintAr: 'اضغط مرتين لسماع موقعك الحالي',
       hintEn: 'Double tap to hear your current location',
     },
+  ];
+
+  const supportActions = [
     {
       path: '/report' as RoutePath,
       label: 'FIX',
@@ -100,7 +94,7 @@ export default function HomeScreen() {
       />
 
       <View style={styles.statusRow}>
-        <StatusPill theme={theme} tone="success" text={language === 'ar' ? 'النظام جاهز' : 'System ready'} />
+        <StatusPill theme={theme} tone="success" text={language === 'ar' ? 'واجهة صوتية جاهزة' : 'Voice interface ready'} />
         <StatusPill
           theme={theme}
           tone={isMuted ? 'danger' : 'normal'}
@@ -109,32 +103,73 @@ export default function HomeScreen() {
       </View>
 
       <ActionTile
+        title={language === 'ar' ? 'ابدأ باختيار وجهتك' : 'Start with a destination'}
+        subtitle={language === 'ar' ? 'ابحث عن قاعة أو مكتب أو مرفق، ثم راجع المسار قبل بدء التوجيه الصوتي.' : 'Find a room, office, or facility, then review the route before voice guidance begins.'}
+        label="GO"
+        theme={theme}
+        onPress={() => navigateTo('/destination', 'اختيار الوجهة', 'destination selection')}
+        accessibilityLabel={language === 'ar' ? 'اختر وجهتك' : 'Select destination'}
+        accessibilityHint={language === 'ar' ? 'اضغط مرتين لفتح قائمة الوجهات' : 'Double tap to open destination search'}
+      />
+
+      <SectionHeader
+        theme={theme}
+        eyebrow={language === 'ar' ? 'تثبيت الموقع' : 'Position anchors'}
+        title={language === 'ar' ? 'حدد نقطة البداية' : 'Set your starting point'}
+        meta={language === 'ar' ? 'خياران' : '2 options'}
+      />
+
+      <View style={styles.actionGrid}>
+        {quickActions.map(action => (
+          <View key={action.path} style={styles.actionCell}>
+            <ActionTile
+              title={language === 'ar' ? action.ar : action.en}
+              subtitle={language === 'ar' ? action.descAr : action.descEn}
+              label={action.label}
+              compact
+              theme={theme}
+              onPress={() => navigateTo(action.path, action.ar, action.en)}
+              accessibilityLabel={language === 'ar' ? action.ar : action.en}
+              accessibilityHint={language === 'ar' ? action.hintAr : action.hintEn}
+            />
+          </View>
+        ))}
+      </View>
+
+      <SectionHeader
+        theme={theme}
+        eyebrow={language === 'ar' ? 'الدعم والتحكم' : 'Support and control'}
+        title={language === 'ar' ? 'أدوات إضافية' : 'More tools'}
+      />
+
+      <View style={styles.actionGrid}>
+        {supportActions.map(action => (
+          <View key={action.path} style={styles.actionCell}>
+            <ActionTile
+              title={language === 'ar' ? action.ar : action.en}
+              subtitle={language === 'ar' ? action.descAr : action.descEn}
+              label={action.label}
+              compact
+              theme={theme}
+              onPress={() => navigateTo(action.path, action.ar, action.en)}
+              accessibilityLabel={language === 'ar' ? action.ar : action.en}
+              accessibilityHint={language === 'ar' ? action.hintAr : action.hintEn}
+            />
+          </View>
+        ))}
+      </View>
+
+      <ActionTile
         title={language === 'ar' ? 'طوارئ SOS' : 'Emergency SOS'}
-        subtitle={language === 'ar' ? 'طلب مساعدة عاجلة وإرسال موقعك للأمن.' : 'Request urgent help and share your position with security.'}
+        subtitle={language === 'ar' ? 'اطلب مساعدة عاجلة وشارك موقعك مع فريق الأمن.' : 'Request urgent help and share your position with security.'}
         label="SOS"
         danger
+        compact
         theme={theme}
         onPress={() => navigateTo('/emergency', 'الطوارئ', 'Emergency SOS')}
         accessibilityLabel={language === 'ar' ? 'طلب مساعدة طوارئ' : 'Emergency assistance'}
         accessibilityHint={language === 'ar' ? 'اضغط مرتين لطلب المساعدة العاجلة' : 'Double tap to request immediate assistance'}
       />
-
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        {language === 'ar' ? 'الإجراءات الأساسية' : 'Core actions'}
-      </Text>
-
-      {actions.map(action => (
-        <ActionTile
-          key={action.path}
-          title={language === 'ar' ? action.ar : action.en}
-          subtitle={language === 'ar' ? action.descAr : action.descEn}
-          label={action.label}
-          theme={theme}
-          onPress={() => navigateTo(action.path, action.ar, action.en)}
-          accessibilityLabel={language === 'ar' ? action.ar : action.en}
-          accessibilityHint={language === 'ar' ? action.hintAr : action.hintEn}
-        />
-      ))}
     </ScreenShell>
   );
 }
@@ -144,12 +179,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-    marginTop: 4,
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginHorizontal: -1,
+  },
+  actionCell: {
+    flexGrow: 1,
+    flexBasis: 160,
+    minWidth: 150,
   },
 });

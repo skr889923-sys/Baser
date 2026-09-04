@@ -1,200 +1,227 @@
-'use client';
+import Link from 'next/link';
+import {
+  ArrowUpLeft,
+  Building2,
+  CircleAlert,
+  MapPinned,
+  Navigation,
+  QrCode,
+  Route,
+  ShieldCheck,
+  Siren,
+  Sparkles,
+  TriangleAlert,
+} from 'lucide-react';
+import DashboardCharts from '@/components/DashboardCharts';
 
-import React from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  LineChart,
-  Line
-} from 'recharts';
+const METRICS = [
+  {
+    label: 'المباني المسجلة',
+    value: '6',
+    detail: 'مبانٍ قابلة لإضافة النقاط',
+    icon: Building2,
+    tone: 'teal',
+  },
+  {
+    label: 'النقاط الملاحية',
+    value: '11',
+    detail: 'مداخل وتقاطعـات ومرافق',
+    icon: MapPinned,
+    tone: 'blue',
+  },
+  {
+    label: 'طلبات SOS',
+    value: '1',
+    detail: 'طلب يحتاج تأكيد الاستلام',
+    icon: Siren,
+    tone: 'red',
+  },
+  {
+    label: 'بلاغات مفتوحة',
+    value: '2',
+    detail: 'بلاغان ضمن متابعة الصيانة',
+    icon: TriangleAlert,
+    tone: 'amber',
+  },
+] as const;
 
-// Seed data representations for dashboard views
-const SCAN_HISTORY_DATA = [
-  { day: 'الأحد', scans: 120 },
-  { day: 'الإثنين', scans: 245 },
-  { day: 'الثلاثاء', scans: 310 },
-  { day: 'الأربعاء', scans: 280 },
-  { day: 'الخميس', scans: 190 },
-];
+const QUICK_ACTIONS = [
+  {
+    href: '/maps',
+    label: 'افتح محرر الخريطة',
+    description: 'ارسم نقاطًا ومسارات على خريطة الحرم.',
+    icon: Navigation,
+  },
+  {
+    href: '/routes',
+    label: 'راجع المسارات',
+    description: 'تحقق من حالة الربط والخطوات الصوتية.',
+    icon: Route,
+  },
+  {
+    href: '/qrs',
+    label: 'جهّز رموز QR',
+    description: 'أنشئ الملصقات وراجع توزيعها الميداني.',
+    icon: QrCode,
+  },
+] as const;
 
-const POPULAR_DESTINATIONS = [
-  { name: 'كلية الحاسب', users: 185 },
-  { name: 'المكتبة المركزية', users: 142 },
-  { name: 'عمادة الطلاب', users: 95 },
-  { name: 'كلية العلوم', users: 78 },
-  { name: 'السنة التحضيرية', users: 110 },
-];
+function metricTone(tone: typeof METRICS[number]['tone']) {
+  return {
+    teal: 'bg-[#e5f3f1] text-[#176d66]',
+    blue: 'bg-sky-50 text-sky-700',
+    red: 'bg-rose-50 text-rose-700',
+    amber: 'bg-amber-50 text-amber-700',
+  }[tone];
+}
 
 export default function DashboardPage() {
+  const today = new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long' }).format(new Date());
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* 1. Header Overview */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold text-slate-800">نظرة عامة على النظام</h3>
-          <p className="text-sm text-slate-500 mt-1">تحديث حي للحركة الملاحية وطلبات الطوارئ داخل الحرم الجامعي.</p>
-        </div>
-        <div className="text-slate-500 text-sm font-semibold">تاريخ اليوم: {new Date().toLocaleDateString('ar-SA')}</div>
-      </div>
+    <div className="space-y-6 lg:space-y-8">
+      <section className="console-hero">
+        <div className="relative z-10 grid gap-7 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="max-w-3xl">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="console-kicker">
+                <Sparkles className="h-3.5 w-3.5" />
+                مركز تشغيل بصيره
+              </span>
+              <span className="console-date">{today}</span>
+            </div>
+            <h2 className="text-balance text-3xl font-black leading-tight tracking-[-0.04em] text-white sm:text-4xl lg:text-[2.8rem]">
+              صورة تشغيلية واحدة للمكان، والمسار، والاستجابة.
+            </h2>
+            <p className="mt-4 max-w-2xl text-pretty text-sm font-semibold leading-7 text-slate-300 sm:text-base">
+              راقب جاهزية الحرم، راجع نقاط التوجيه، وانتقل مباشرة إلى العمل الذي يحتاج تدخلك.
+            </p>
+          </div>
 
-      {/* 2. Key Metrics Widgets Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Buildings Card */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5">
-          <div className="w-14 h-14 bg-sky-50 rounded-xl flex items-center justify-center text-3xl">🏢</div>
+          <div className="grid grid-cols-2 gap-3 lg:w-72">
+            <div className="console-mini-stat">
+              <span className="text-2xl font-black tabular-nums text-white">92%</span>
+              <span className="text-xs font-bold text-slate-400">جاهزية العرض</span>
+            </div>
+            <div className="console-mini-stat">
+              <span className="text-2xl font-black tabular-nums text-[#8cd3cd]">3</span>
+              <span className="text-xs font-bold text-slate-400">مهام عاجلة</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="dashboard-metrics">
+        <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <span className="text-slate-400 text-sm font-semibold block">إجمالي المباني</span>
-            <span className="text-3xl font-extrabold text-slate-800">6</span>
+            <p className="eyebrow-label">المشهد الحالي</p>
+            <h2 id="dashboard-metrics" className="mt-1 text-xl font-black tracking-tight text-slate-950">
+              ما يحتاج الانتباه الآن
+            </h2>
           </div>
+          <span className="data-badge">بيانات تجريبية</span>
         </div>
 
-        {/* Navigation Nodes Card */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5">
-          <div className="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center text-3xl">📍</div>
-          <div>
-            <span className="text-slate-400 text-sm font-semibold block">النقاط الملاحية</span>
-            <span className="text-3xl font-extrabold text-slate-800">11</span>
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {METRICS.map(metric => {
+            const Icon = metric.icon;
+            return (
+              <article key={metric.label} className="metric-panel">
+                <div className={`metric-icon ${metricTone(metric.tone)}`}>
+                  <Icon className="h-5 w-5" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-slate-500">{metric.label}</p>
+                  <p className="mt-2 text-4xl font-black tracking-[-0.05em] text-slate-950 tabular-nums">{metric.value}</p>
+                  <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{metric.detail}</p>
+                </div>
+              </article>
+            );
+          })}
         </div>
+      </section>
 
-        {/* Live SOS Alerts */}
-        <div className="bg-red-50 p-6 rounded-2xl shadow-sm border border-red-200 flex items-center gap-5">
-          <div className="w-14 h-14 bg-red-500 rounded-xl flex items-center justify-center text-3xl animate-pulse">🚨</div>
-          <div>
-            <span className="text-red-800 text-sm font-bold block">طوارئ SOS نشطة</span>
-            <span className="text-3xl font-extrabold text-red-700">1</span>
-          </div>
-        </div>
+      <DashboardCharts />
 
-        {/* Obstacle Reports Card */}
-        <div className="bg-amber-50 p-6 rounded-2xl shadow-sm border border-amber-200 flex items-center gap-5">
-          <div className="w-14 h-14 bg-amber-400 rounded-xl flex items-center justify-center text-3xl">⚠️</div>
-          <div>
-            <span className="text-amber-800 text-sm font-bold block">بلاغات عوائق مفتوحة</span>
-            <span className="text-3xl font-extrabold text-amber-700">2</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Graphs Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Scans Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h4 className="text-base font-bold text-slate-800 mb-6">عدد مسوحات رموز QR اليومية</h4>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={SCAN_HISTORY_DATA}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="day" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip />
-                <Line type="monotone" dataKey="scans" stroke="#0284c7" strokeWidth={3} activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Top Destinations Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h4 className="text-base font-bold text-slate-800 mb-6">الوجهات الملاحية الأكثر طلبًا</h4>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={POPULAR_DESTINATIONS}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip />
-                <Bar dataKey="users" fill="#10b981" radius={[8, 8, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Live Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Live SOS Alerts */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-base font-bold text-red-600 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-600 block animate-pulse"></span>
-              إشارة استغاثة نشطة (SOS)
-            </h4>
-            <span className="text-xs text-red-500 font-bold bg-red-50 px-2.5 py-1 rounded-full">استجابة فورية</span>
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.08fr_0.92fr]">
+        <article className="surface-panel overflow-hidden p-0">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-6">
+            <div>
+              <p className="eyebrow-label text-rose-700">الاستجابة</p>
+              <h2 className="mt-2 text-lg font-black tracking-tight text-slate-950">طلبات تحتاج قرارًا</h2>
+            </div>
+            <span className="status-chip status-chip-danger">
+              <span className="h-2 w-2 rounded-full bg-current" />
+              طلب نشط
+            </span>
           </div>
 
-          <div className="border border-red-100 rounded-xl overflow-hidden bg-red-50/20">
-            <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-red-50 text-red-800 font-semibold text-sm">
-                  <th className="p-4">الطالب</th>
-                  <th className="p-4">أقرب نقطة مرئية</th>
-                  <th className="p-4">المنطقة الجغرافية</th>
-                  <th className="p-4">التحكم</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                <tr className="border-t border-red-100">
-                  <td className="p-4 font-bold text-slate-800">مجهول (زائر كفيف)</td>
-                  <td className="p-4 text-slate-600">بوابة الحرم الرئيسية (بوابة 1)</td>
-                  <td className="p-4 text-slate-500">24.7082 , 46.6705</td>
-                  <td className="p-4">
-                    <a href="/emergency" className="bg-red-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors inline-block">
-                      تفاصيل / توجيه دورية 🚨
-                    </a>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <div className="divide-y divide-slate-100">
+            <div className="group grid gap-4 px-5 py-5 transition-colors hover:bg-rose-50/40 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:px-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+                <Siren className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-black text-slate-950">طلب مساعدة من البوابة الرئيسية</h3>
+                  <span className="text-xs font-bold text-rose-700">منذ دقيقتين</span>
+                </div>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                  زائر غير مسجل · أقرب نقطة: بوابة الحرم الرئيسية
+                </p>
+              </div>
+              <Link href="/emergency" className="primary-action">
+                فتح غرفة الاستجابة
+                <ArrowUpLeft className="h-4 w-4" />
+              </Link>
+            </div>
 
-        {/* Live Obstacle Reports */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <span>⚠️</span> بلاغات العوائق والممرات المغلقة
-            </h4>
-            <a href="/reports" className="text-xs text-slate-500 hover:text-slate-800 font-bold">عرض جميع البلاغات ➔</a>
+            <div className="grid gap-4 px-5 py-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:px-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <CircleAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-950">مصعد الدور الأرضي متعطل</h3>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                  كلية الحاسب · البلاغ قيد الصيانة
+                </p>
+              </div>
+              <Link href="/reports" className="secondary-action">
+                راجع البلاغ
+                <ArrowUpLeft className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </article>
+
+        <aside className="surface-panel">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow-label">اختصارات العمل</p>
+              <h2 className="mt-2 text-lg font-black tracking-tight text-slate-950">انتقل مباشرة للمهمة</h2>
+            </div>
+            <ShieldCheck className="h-6 w-6 text-[#23887f]" />
           </div>
 
-          <div className="border border-slate-100 rounded-xl overflow-hidden">
-            <table className="w-full text-right border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-slate-700 font-semibold text-sm">
-                  <th className="p-4">نوع المشكلة</th>
-                  <th className="p-4">الموقع</th>
-                  <th className="p-4">الوصف</th>
-                  <th className="p-4">الحالة</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                <tr className="border-t border-slate-100">
-                  <td className="p-4 font-bold text-slate-800">🚧 عائق في الممر</td>
-                  <td className="p-4 text-slate-600">بهو كلية الحاسب الرئيسي</td>
-                  <td className="p-4 text-slate-500">معدات ومقاعد صيانة ملقاة في ممر المكفوفين</td>
-                  <td className="p-4">
-                    <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">قيد المراجعة</span>
-                  </td>
-                </tr>
-                <tr className="border-t border-slate-100">
-                  <td className="p-4 font-bold text-slate-800">🛗 مصعد متعطل</td>
-                  <td className="p-4 text-slate-600">كلية الحاسب - الدور الأرضي</td>
-                  <td className="p-4 text-slate-500">المصعد لا يستجيب للأزرار الخارجية البارزة</td>
-                  <td className="p-4">
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-bold">قيد الصيانة</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {QUICK_ACTIONS.map(action => {
+              const Icon = action.icon;
+              return (
+                <Link key={action.href} href={action.href} className="quick-action group">
+                  <span className="quick-action-icon">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-black text-slate-950">{action.label}</span>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">{action.description}</span>
+                  </span>
+                  <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-transform group-hover:-translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              );
+            })}
           </div>
-        </div>
-      </div>
+        </aside>
+      </section>
     </div>
   );
 }

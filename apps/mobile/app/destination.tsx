@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
@@ -9,6 +9,7 @@ import {
   getInterfaceTheme,
   ScreenShell,
   SignalGlyph,
+  StatePanel,
   StatusPill,
   surfaceStyle,
 } from '../src/components/BlindInterface';
@@ -46,22 +47,25 @@ export default function DestinationScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const loadPoints = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await SupabaseService.getNavigationPoints();
-        setPoints(data);
-      } catch (loadError) {
-        console.error(loadError);
-        setError(language === 'ar' ? 'تعذر تحميل الوجهات.' : 'Could not load destinations.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadPoints = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await SupabaseService.getNavigationPoints();
+      setPoints(data);
+    } catch (loadError) {
+      console.error(loadError);
+      setError(language === 'ar' ? 'تعذر تحميل الوجهات.' : 'Could not load destinations.');
+    } finally {
+      setLoading(false);
+    }
+  }, [language]);
 
+  useEffect(() => {
     loadPoints();
+  }, [loadPoints]);
+
+  useEffect(() => {
     VoiceService.speak(
       language === 'ar'
         ? 'شاشة اختيار الوجهة. استخدم البحث أو اختر تصنيفاً ثم اضغط على الوجهة المطلوبة.'
@@ -129,6 +133,7 @@ export default function DestinationScreen() {
               backgroundColor: theme.surface,
               color: theme.text,
               borderColor: theme.border,
+              textAlign: language === 'ar' ? 'right' : 'left',
             },
           ]}
           placeholder={language === 'ar' ? 'ابحث عن مبنى، قاعة، مكتب...' : 'Search building, room, office...'}
@@ -136,6 +141,7 @@ export default function DestinationScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={announceResultCount}
+          returnKeyType="search"
           accessible={true}
           accessibilityLabel={language === 'ar' ? 'حقل البحث عن الوجهة' : 'Destination search field'}
           accessibilityHint={language === 'ar' ? 'اكتب اسم الوجهة ثم اضغط إدخال لسماع عدد النتائج' : 'Type a destination and press enter to hear result count'}
@@ -157,6 +163,7 @@ export default function DestinationScreen() {
               ]}
               onPress={() => setSelectedCategory(category.key)}
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel={language === 'ar' ? `تصنيف ${category.ar}` : `${category.en} category`}
               accessibilityState={{ selected }}
               activeOpacity={0.82}
@@ -173,16 +180,35 @@ export default function DestinationScreen() {
       </View>
 
       {loading ? (
-        <View style={[styles.stateBox, { backgroundColor: theme.background }]}>
-          <ActivityIndicator size="large" color={theme.accent} />
-          <Text style={[styles.stateText, { color: theme.textMuted }]}>
-            {language === 'ar' ? 'جاري تحميل الوجهات...' : 'Loading destinations...'}
+        <View
+          style={styles.skeletonList}
+          accessible={true}
+          accessibilityLabel={language === 'ar' ? 'جاري تحميل الوجهات' : 'Loading destinations'}
+        >
+          {[0, 1, 2].map(item => (
+            <View key={item} style={[styles.skeletonItem, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}>
+              <View style={[styles.skeletonGlyph, { backgroundColor: theme.accentSoft }]} />
+              <View style={styles.skeletonCopy}>
+                <View style={[styles.skeletonLineStrong, { backgroundColor: theme.raised }]} />
+                <View style={[styles.skeletonLine, { backgroundColor: theme.mutedSurface }]} />
+              </View>
+            </View>
+          ))}
+          <Text style={[styles.loadingLabel, { color: theme.textMuted }]}>
+            {language === 'ar' ? 'نجهّز فهرس الوجهات' : 'Preparing destination index'}
           </Text>
         </View>
       ) : error ? (
-        <View style={[styles.stateBox, { backgroundColor: theme.background }]}>
-          <Text style={[styles.stateText, { color: theme.danger }]}>{error}</Text>
-        </View>
+        <StatePanel
+          code="ERR"
+          tone="danger"
+          theme={theme}
+          title={language === 'ar' ? 'تعذر الوصول إلى الوجهات' : 'Destinations are unavailable'}
+          description={language === 'ar' ? 'تحقق من الاتصال ثم أعد المحاولة. لن نفقد بحثك الحالي.' : 'Check the connection and try again. Your current search will be preserved.'}
+          actionTitle={language === 'ar' ? 'إعادة المحاولة' : 'Try again'}
+          actionLabel={language === 'ar' ? 'إعادة تحميل الوجهات' : 'Reload destinations'}
+          onAction={loadPoints}
+        />
       ) : (
         <FlatList
           data={filteredPoints}
@@ -193,6 +219,7 @@ export default function DestinationScreen() {
               style={[styles.pointItem, surfaceStyle(theme)]}
               onPress={() => handleSelectPoint(item)}
               accessible={true}
+              accessibilityRole="button"
               accessibilityLabel={language === 'ar' ? item.name_ar : item.name_en}
               accessibilityHint={
                 language === 'ar'
@@ -213,11 +240,39 @@ export default function DestinationScreen() {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View style={styles.emptyView}>
-              <Text style={[styles.stateText, { color: theme.textMuted }]}>
-                {language === 'ar' ? 'لا توجد نتائج مطابقة. جرّب كلمة أخرى أو غيّر التصنيف.' : 'No matching results. Try another term or category.'}
-              </Text>
-            </View>
+            <StatePanel
+              code={searchQuery || selectedCategory !== 'all' ? 'ZERO' : 'SYNC'}
+              tone={searchQuery || selectedCategory !== 'all' ? 'normal' : 'warning'}
+              theme={theme}
+              title={
+                searchQuery || selectedCategory !== 'all'
+                  ? (language === 'ar' ? 'لا توجد نتائج مطابقة' : 'No matching results')
+                  : (language === 'ar' ? 'لا توجد وجهات متاحة الآن' : 'No destinations are available')
+              }
+              description={
+                searchQuery || selectedCategory !== 'all'
+                  ? (language === 'ar' ? 'غيّر عبارة البحث أو اعرض جميع التصنيفات.' : 'Change the search phrase or show every category.')
+                  : (language === 'ar' ? 'أعد مزامنة البيانات أو استخدم مسح QR لتثبيت موقعك.' : 'Refresh campus data or use a QR tag to set your position.')
+              }
+              actionTitle={
+                searchQuery || selectedCategory !== 'all'
+                  ? (language === 'ar' ? 'مسح عوامل البحث' : 'Clear filters')
+                  : (language === 'ar' ? 'مزامنة الوجهات' : 'Refresh destinations')
+              }
+              actionLabel={
+                searchQuery || selectedCategory !== 'all'
+                  ? (language === 'ar' ? 'مسح البحث والتصنيف' : 'Clear search and category')
+                  : (language === 'ar' ? 'إعادة تحميل بيانات الوجهات' : 'Reload destination data')
+              }
+              onAction={() => {
+                if (searchQuery || selectedCategory !== 'all') {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                  return;
+                }
+                loadPoints();
+              }}
+            />
           }
         />
       )}
@@ -308,21 +363,46 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '600',
   },
-  stateBox: {
-    flex: 1,
-    minHeight: 260,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+  skeletonList: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 28,
   },
-  stateText: {
-    fontSize: 17,
-    lineHeight: 25,
+  skeletonItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 94,
+    padding: 16,
+    borderWidth: 1.5,
+    borderRadius: 22,
+    marginBottom: 12,
+    opacity: 0.82,
+  },
+  skeletonGlyph: {
+    width: 60,
+    height: 48,
+    borderRadius: 16,
+  },
+  skeletonCopy: {
+    flex: 1,
+    marginLeft: 14,
+    gap: 10,
+  },
+  skeletonLineStrong: {
+    width: '68%',
+    height: 15,
+    borderRadius: 8,
+  },
+  skeletonLine: {
+    width: '92%',
+    height: 11,
+    borderRadius: 6,
+  },
+  loadingLabel: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
     textAlign: 'center',
-    marginTop: 12,
-  },
-  emptyView: {
-    paddingVertical: 46,
   },
 });
