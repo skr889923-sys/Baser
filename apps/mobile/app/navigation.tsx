@@ -39,6 +39,8 @@ export default function NavigationScreen() {
     prevStep,
     stopNavigation,
     isHighContrast,
+    isCheckingRoute,
+    routeError,
   } = useNavigationStore();
 
   const theme = getInterfaceTheme(isHighContrast);
@@ -94,7 +96,7 @@ export default function NavigationScreen() {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
         <Text style={[styles.errorText, { color: theme.text }]}>
-          {language === 'ar' ? 'لا توجد رحلة نشطة حالياً.' : 'No active navigation session.'}
+          {routeError || (language === 'ar' ? 'لا توجد رحلة نشطة حالياً.' : 'No active navigation session.')}
         </Text>
         <PrimaryButton
           theme={theme}
@@ -114,7 +116,7 @@ export default function NavigationScreen() {
     <ScreenShell highContrast={isHighContrast}>
       <View style={[styles.hudHeader, surfaceStyle(theme)]}>
         <View style={styles.headerTop}>
-          <StatusPill theme={theme} tone="success" text={language === 'ar' ? 'إرشاد نشط' : 'Guidance active'} />
+          <StatusPill theme={theme} tone="success" text={isCheckingRoute ? (language === 'ar' ? 'نتحقق من إتاحة المسار' : 'Checking route availability') : (language === 'ar' ? 'إرشاد نشط' : 'Guidance active')} />
           <SignalGlyph label={directionCode(currentStep.direction)} theme={theme} danger={currentStep.warning_level !== 'none'} />
         </View>
         <Text style={[styles.destination, { color: theme.text }]}>
@@ -186,7 +188,7 @@ export default function NavigationScreen() {
               title={language === 'ar' ? 'السابق' : 'Previous'}
               onPress={prevStep}
               variant="secondary"
-              disabled={currentStepIndex === 0}
+              disabled={currentStepIndex === 0 || isCheckingRoute}
               accessibilityLabel={language === 'ar' ? 'الخطوة السابقة' : 'Previous step'}
             />
           </View>
@@ -195,6 +197,7 @@ export default function NavigationScreen() {
               theme={theme}
               title={currentStepIndex === routeSteps.length - 1 ? (language === 'ar' ? 'وصلت' : 'Arrived') : (language === 'ar' ? 'التالي' : 'Next')}
               onPress={nextStep}
+              disabled={isCheckingRoute}
               accessibilityLabel={language === 'ar' ? 'الخطوة التالية' : 'Next step'}
             />
           </View>

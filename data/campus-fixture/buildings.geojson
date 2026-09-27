@@ -1,0 +1,166 @@
+{
+  "type": "FeatureCollection",
+  "name": "buildings",
+  "fixture": true,
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              31.692511,
+              26.551572
+            ],
+            [
+              31.693414,
+              26.551572
+            ],
+            [
+              31.693414,
+              26.551931
+            ],
+            [
+              31.692511,
+              26.551931
+            ],
+            [
+              31.692511,
+              26.551572
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "b_engineering",
+        "name_ar": "كلية الهندسة",
+        "name_en": "Faculty of Engineering",
+        "entrance_nodes": [
+          "n_eng_main",
+          "n_eng_side"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              31.691657,
+              26.551123
+            ],
+            [
+              31.69236,
+              26.551123
+            ],
+            [
+              31.69236,
+              26.551437
+            ],
+            [
+              31.691657,
+              26.551437
+            ],
+            [
+              31.691657,
+              26.551123
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "b_library",
+        "name_ar": "المكتبة المركزية",
+        "name_en": "Central Library",
+        "entrance_nodes": [
+          "n_lib_entrance"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              31.693866,
+              26.550943
+            ],
+            [
+              31.69467,
+              26.550943
+            ],
+            [
+              31.69467,
+              26.551347
+            ],
+            [
+              31.693866,
+              26.551347
+            ],
+            [
+              31.693866,
+              26.550943
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "b_science",
+        "name_ar": "كلية العلوم",
+        "name_en": "Faculty of Science",
+        "entrance_nodes": [
+          "n_sci_entrance"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              31.690904,
+              26.549147
+            ],
+            [
+              31.691607,
+              26.549147
+            ],
+            [
+              31.691607,
+              26.549461
+            ],
+            [
+              31.690904,
+              26.549461
+            ],
+            [
+              31.690904,
+              26.549147
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "id": "b_admin",
+        "name_ar": "المبنى الإداري",
+        "name_en": "Administration Building",
+        "entrance_nodes": [
+          "n_admin_entrance"
+        ]
+      }
+    }
+  ]
+}

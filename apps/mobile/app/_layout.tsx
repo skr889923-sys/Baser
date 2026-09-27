@@ -113,6 +113,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="permissions" options={{ title: language === 'ar' ? 'الصلاحيات المطلوبة' : 'Required Permissions' }} />
           <Stack.Screen name="home" options={{ title: language === 'ar' ? 'الرئيسية' : 'Home' }} />
+          <Stack.Screen name="campus" options={{ title: language === 'ar' ? 'الملاحة الخارجية' : 'Outdoor navigation' }} />
           <Stack.Screen name="destination" options={{ title: language === 'ar' ? 'اختر الوجهة' : 'Select Destination' }} />
           <Stack.Screen name="details" options={{ title: language === 'ar' ? 'تفاصيل الوجهة' : 'Destination Details' }} />
           <Stack.Screen name="navigation" options={{ title: language === 'ar' ? 'شاشة الإرشاد الملاحي' : 'Navigation HUD' }} />

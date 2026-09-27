@@ -1,0 +1,1519 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-campus",
+  "name_ar": "حرم مصطنع للاختبار فقط",
+  "name_en": "Synthetic test campus",
+  "fixture": true,
+  "revision": 1,
+  "source": "Synthetic campus-map fixture; not a real campus or field survey",
+  "nodes": {
+    "type": "FeatureCollection",
+    "name": "nodes",
+    "fixture": true,
+    "crs": {
+      "type": "name",
+      "properties": {
+        "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+      }
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.69,
+            26.55
+          ]
+        },
+        "properties": {
+          "id": "n_gate_main",
+          "type": "campus_gate",
+          "name_ar": "البوابة الرئيسية",
+          "name_en": "Main gate",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": "open",
+          "landmark_ar": "بوابة حديدية كبيرة، كشك الأمن على اليمين",
+          "landmark_en": "Large iron gate, security booth on the right",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.690402,
+            26.552336
+          ]
+        },
+        "properties": {
+          "id": "n_gate_north",
+          "type": "campus_gate",
+          "name_ar": "البوابة الشمالية",
+          "name_en": "North gate",
+          "building_id": null,
+          "wheelchair": "limited",
+          "door_type": "open",
+          "landmark_ar": "بوابة صغيرة، درجة واحدة عند الدخول",
+          "landmark_en": "Small gate, single step at the entrance",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.690904,
+            26.550359
+          ]
+        },
+        "properties": {
+          "id": "n_plaza_c",
+          "type": "junction",
+          "name_ar": "ساحة الميدان",
+          "name_en": "Central plaza",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": null,
+          "landmark_ar": "ساحة مفتوحة، نافورة في المنتصف وصوت الميه واضح",
+          "landmark_en": "Open plaza, fountain in the middle, water clearly audible",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.692008,
+            26.550539
+          ]
+        },
+        "properties": {
+          "id": "n_junction_lib",
+          "type": "junction",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": null,
+          "landmark_ar": "تقاطع أمام المكتبة، البلاط بيتغير من ناعم لخشن",
+          "landmark_en": "Junction by the library, paving changes smooth to rough",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.693314,
+            26.550808
+          ]
+        },
+        "properties": {
+          "id": "n_junction_east",
+          "type": "junction",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": null,
+          "landmark_ar": "تقاطع تحت صف النخل",
+          "landmark_en": "Junction under the row of palm trees",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.692109,
+            26.549281
+          ]
+        },
+        "properties": {
+          "id": "n_junction_south",
+          "type": "junction",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "unknown",
+          "door_type": null,
+          "landmark_ar": "تقاطع جنب موقف السيارات",
+          "landmark_en": "Junction next to the car park",
+          "survey_status": "imagery",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.692511,
+            26.551347
+          ]
+        },
+        "properties": {
+          "id": "n_steps_top",
+          "type": "stairs_top",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "no",
+          "door_type": null,
+          "landmark_ar": "أعلى السلم، درابزين على الجهتين",
+          "landmark_en": "Top of the stairs, handrail on both sides",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.692511,
+            26.550898
+          ]
+        },
+        "properties": {
+          "id": "n_steps_bottom",
+          "type": "stairs_bottom",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "no",
+          "door_type": null,
+          "landmark_ar": "أسفل السلم",
+          "landmark_en": "Bottom of the stairs",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.693013,
+            26.550943
+          ]
+        },
+        "properties": {
+          "id": "n_ramp_bottom",
+          "type": "ramp_bottom",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": null,
+          "landmark_ar": "أسفل المنحدر، بلاط تحذيري قبله",
+          "landmark_en": "Bottom of the ramp, tactile paving before it",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.693113,
+            26.551392
+          ]
+        },
+        "properties": {
+          "id": "n_ramp_top",
+          "type": "ramp_top",
+          "name_ar": "",
+          "name_en": "",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": null,
+          "landmark_ar": "أعلى المنحدر",
+          "landmark_en": "Top of the ramp",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.692611,
+            26.551707
+          ]
+        },
+        "properties": {
+          "id": "n_eng_main",
+          "type": "building_entrance",
+          "name_ar": "المدخل الرئيسي - كلية الهندسة",
+          "name_en": "Engineering — main entrance",
+          "building_id": "b_engineering",
+          "wheelchair": "no",
+          "door_type": "double_manual",
+          "landmark_ar": "باب زجاجي مزدوج، ثلاث درجات قبل الباب",
+          "landmark_en": "Double glass door, three steps before it",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.693213,
+            26.551752
+          ]
+        },
+        "properties": {
+          "id": "n_eng_side",
+          "type": "building_entrance",
+          "name_ar": "المدخل الجانبي - كلية الهندسة",
+          "name_en": "Engineering — side entrance",
+          "building_id": "b_engineering",
+          "wheelchair": "yes",
+          "door_type": "single_manual",
+          "landmark_ar": "باب جانبي مستوي مع الأرض، بعد المنحدر",
+          "landmark_en": "Side door level with the ground, past the ramp",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.691958,
+            26.551168
+          ]
+        },
+        "properties": {
+          "id": "n_lib_entrance",
+          "type": "building_entrance",
+          "name_ar": "مدخل المكتبة",
+          "name_en": "Library entrance",
+          "building_id": "b_library",
+          "wheelchair": "yes",
+          "door_type": "automatic",
+          "landmark_ar": "باب أوتوماتيك، صوت جرس عند الفتح",
+          "landmark_en": "Automatic door, chime when it opens",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.694017,
+            26.551078
+          ]
+        },
+        "properties": {
+          "id": "n_sci_entrance",
+          "type": "building_entrance",
+          "name_ar": "مدخل كلية العلوم",
+          "name_en": "Science — main entrance",
+          "building_id": "b_science",
+          "wheelchair": "limited",
+          "door_type": "double_manual",
+          "landmark_ar": "درجة واحدة عند الباب، عرض ٢٠ سم",
+          "landmark_en": "Single step at the door, 20 cm",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.691205,
+            26.549461
+          ]
+        },
+        "properties": {
+          "id": "n_admin_entrance",
+          "type": "building_entrance",
+          "name_ar": "مدخل المبنى الإداري",
+          "name_en": "Administration entrance",
+          "building_id": "b_admin",
+          "wheelchair": "unknown",
+          "door_type": "single_manual",
+          "landmark_ar": null,
+          "landmark_en": null,
+          "survey_status": "imagery",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            31.691506,
+            26.55018
+          ]
+        },
+        "properties": {
+          "id": "n_cafe",
+          "type": "poi",
+          "name_ar": "الكافتيريا",
+          "name_en": "Cafeteria",
+          "building_id": null,
+          "wheelchair": "yes",
+          "door_type": "open",
+          "landmark_ar": "ريحة القهوة وصوت الناس واضح",
+          "landmark_en": "Smell of coffee, audible chatter",
+          "survey_status": "verified",
+          "photo_ref": null,
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active"
+        }
+      }
+    ]
+  },
+  "edges": {
+    "type": "FeatureCollection",
+    "name": "edges",
+    "fixture": true,
+    "crs": {
+      "type": "name",
+      "properties": {
+        "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+      }
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.69,
+              26.55
+            ],
+            [
+              31.690904,
+              26.550359
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0001",
+          "from": "n_gate_main",
+          "to": "n_plaza_c",
+          "length_m": 98,
+          "surface": "paved",
+          "width_m": 4,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 1,
+          "tactile_paving": true,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "كشك الأمن على اليمين",
+            "صف أشجار على اليسار"
+          ],
+          "hazards_ar": [
+            "سيارات بتدخل من البوابة"
+          ],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.690904,
+              26.550359
+            ],
+            [
+              31.691506,
+              26.55018
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0002",
+          "from": "n_plaza_c",
+          "to": "n_cafe",
+          "length_m": 63,
+          "surface": "tiled",
+          "width_m": 3,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 0,
+          "tactile_paving": false,
+          "covered": true,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "النافورة على اليمين",
+            "الكافتيريا قدامك، ريحة القهوة"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.691506,
+              26.55018
+            ],
+            [
+              31.692008,
+              26.550539
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0003",
+          "from": "n_cafe",
+          "to": "n_junction_lib",
+          "length_m": 64,
+          "surface": "tiled",
+          "width_m": 3,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 0,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "كراسي الكافتيريا على اليسار"
+          ],
+          "hazards_ar": [
+            "كراسي متحركة ممكن تكون في الطريق"
+          ],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.690904,
+              26.550359
+            ],
+            [
+              31.692008,
+              26.550539
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0004",
+          "from": "n_plaza_c",
+          "to": "n_junction_lib",
+          "length_m": 112,
+          "surface": "paved",
+          "width_m": 3.5,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 1,
+          "tactile_paving": true,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "ممر مستقيم، بلاط تحذيري في النص"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692008,
+              26.550539
+            ],
+            [
+              31.691958,
+              26.551168
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0005",
+          "from": "n_junction_lib",
+          "to": "n_lib_entrance",
+          "length_m": 70,
+          "surface": "tiled",
+          "width_m": 2.5,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 2,
+          "tactile_paving": true,
+          "covered": true,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "ممر مغطى، الباب الأوتوماتيك في الآخر"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692008,
+              26.550539
+            ],
+            [
+              31.692511,
+              26.550898
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0006",
+          "from": "n_junction_lib",
+          "to": "n_steps_bottom",
+          "length_m": 64,
+          "surface": "paved",
+          "width_m": 2.5,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 2,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "الطريق بيضيق شوية"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692511,
+              26.550898
+            ],
+            [
+              31.692511,
+              26.551347
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0007",
+          "from": "n_steps_bottom",
+          "to": "n_steps_top",
+          "length_m": 50,
+          "surface": "concrete",
+          "width_m": 2,
+          "steps": 12,
+          "step_height_cm": 16,
+          "handrail": true,
+          "incline_pct": null,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "poor",
+          "wheelchair": "no",
+          "oneway": false,
+          "landmarks_ar": [
+            "سلم ١٢ درجة، درابزين على الجهتين"
+          ],
+          "hazards_ar": [
+            "الدرجات مش متساوية في الارتفاع"
+          ],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692511,
+              26.551347
+            ],
+            [
+              31.692611,
+              26.551707
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0008",
+          "from": "n_steps_top",
+          "to": "n_eng_main",
+          "length_m": 41,
+          "surface": "paved",
+          "width_m": 3,
+          "steps": 3,
+          "step_height_cm": 15,
+          "handrail": false,
+          "incline_pct": null,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "no",
+          "oneway": false,
+          "landmarks_ar": [
+            "ساحة صغيرة قبل الباب"
+          ],
+          "hazards_ar": [
+            "٣ درجات قبل الباب من غير درابزين"
+          ],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692008,
+              26.550539
+            ],
+            [
+              31.693314,
+              26.550808
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0009",
+          "from": "n_junction_lib",
+          "to": "n_junction_east",
+          "length_m": 133,
+          "surface": "paved",
+          "width_m": 3.5,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 1,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "صف نخل على اليمين"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.693314,
+              26.550808
+            ],
+            [
+              31.693013,
+              26.550943
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0010",
+          "from": "n_junction_east",
+          "to": "n_ramp_bottom",
+          "length_m": 33,
+          "surface": "paved",
+          "width_m": 3,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 2,
+          "tactile_paving": true,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "بلاط تحذيري قبل المنحدر"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.693013,
+              26.550943
+            ],
+            [
+              31.693113,
+              26.551392
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0011",
+          "from": "n_ramp_bottom",
+          "to": "n_ramp_top",
+          "length_m": 51,
+          "surface": "concrete",
+          "width_m": 2,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": true,
+          "incline_pct": 7,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "منحدر بدرابزين، ميل متوسط"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.693113,
+              26.551392
+            ],
+            [
+              31.693213,
+              26.551752
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0012",
+          "from": "n_ramp_top",
+          "to": "n_eng_side",
+          "length_m": 41,
+          "surface": "paved",
+          "width_m": 2.5,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 1,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "الباب الجانبي على الشمال"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.693314,
+              26.550808
+            ],
+            [
+              31.694017,
+              26.551078
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0013",
+          "from": "n_junction_east",
+          "to": "n_sci_entrance",
+          "length_m": 76,
+          "surface": "paved",
+          "width_m": 3,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 1,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "good",
+          "wheelchair": "yes",
+          "oneway": false,
+          "landmarks_ar": [
+            "مبنى العلوم قدامك"
+          ],
+          "hazards_ar": [],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.690402,
+              26.552336
+            ],
+            [
+              31.693213,
+              26.551752
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0014",
+          "from": "n_gate_north",
+          "to": "n_eng_side",
+          "length_m": 287,
+          "surface": "paved",
+          "width_m": 2,
+          "steps": 0,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": 2,
+          "tactile_paving": false,
+          "covered": false,
+          "lighting": "poor",
+          "wheelchair": "limited",
+          "oneway": true,
+          "landmarks_ar": [
+            "بوابة دوارة، اتجاه واحد للدخول"
+          ],
+          "hazards_ar": [
+            "البوابة الدوارة ضيقة على الكرسي المتحرك"
+          ],
+          "survey_status": "verified",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.690904,
+              26.550359
+            ],
+            [
+              31.692109,
+              26.549281
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0015",
+          "from": "n_plaza_c",
+          "to": "n_junction_south",
+          "length_m": 170,
+          "surface": "unknown",
+          "width_m": null,
+          "steps": null,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": null,
+          "tactile_paving": null,
+          "covered": null,
+          "lighting": "unknown",
+          "wheelchair": "unknown",
+          "oneway": false,
+          "landmarks_ar": [],
+          "hazards_ar": [],
+          "survey_status": "imagery",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692109,
+              26.549281
+            ],
+            [
+              31.691205,
+              26.549461
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0016",
+          "from": "n_junction_south",
+          "to": "n_admin_entrance",
+          "length_m": 92,
+          "surface": "unknown",
+          "width_m": null,
+          "steps": null,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": null,
+          "tactile_paving": null,
+          "covered": null,
+          "lighting": "unknown",
+          "wheelchair": "unknown",
+          "oneway": false,
+          "landmarks_ar": [],
+          "hazards_ar": [],
+          "survey_status": "imagery",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [
+              31.692109,
+              26.549281
+            ],
+            [
+              31.692008,
+              26.550539
+            ]
+          ]
+        },
+        "properties": {
+          "id": "e_0017",
+          "from": "n_junction_south",
+          "to": "n_junction_lib",
+          "length_m": 140,
+          "surface": "unknown",
+          "width_m": null,
+          "steps": null,
+          "step_height_cm": null,
+          "handrail": null,
+          "incline_pct": null,
+          "tactile_paving": null,
+          "covered": null,
+          "lighting": "unknown",
+          "wheelchair": "unknown",
+          "oneway": false,
+          "landmarks_ar": [],
+          "hazards_ar": [],
+          "survey_status": "imagery",
+          "survey_source": null,
+          "surveyed_at": null,
+          "surveyed_by": null,
+          "valid_until": null,
+          "closure_reason": null,
+          "closed_at": null,
+          "photo_refs": [],
+          "status": "active",
+          "guidance_forward": null,
+          "guidance_reverse": null
+        }
+      }
+    ]
+  },
+  "buildings": {
+    "type": "FeatureCollection",
+    "name": "buildings",
+    "fixture": true,
+    "crs": {
+      "type": "name",
+      "properties": {
+        "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+      }
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                31.692511,
+                26.551572
+              ],
+              [
+                31.693414,
+                26.551572
+              ],
+              [
+                31.693414,
+                26.551931
+              ],
+              [
+                31.692511,
+                26.551931
+              ],
+              [
+                31.692511,
+                26.551572
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "b_engineering",
+          "name_ar": "كلية الهندسة",
+          "name_en": "Faculty of Engineering",
+          "entrance_nodes": [
+            "n_eng_main",
+            "n_eng_side"
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                31.691657,
+                26.551123
+              ],
+              [
+                31.69236,
+                26.551123
+              ],
+              [
+                31.69236,
+                26.551437
+              ],
+              [
+                31.691657,
+                26.551437
+              ],
+              [
+                31.691657,
+                26.551123
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "b_library",
+          "name_ar": "المكتبة المركزية",
+          "name_en": "Central Library",
+          "entrance_nodes": [
+            "n_lib_entrance"
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                31.693866,
+                26.550943
+              ],
+              [
+                31.69467,
+                26.550943
+              ],
+              [
+                31.69467,
+                26.551347
+              ],
+              [
+                31.693866,
+                26.551347
+              ],
+              [
+                31.693866,
+                26.550943
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "b_science",
+          "name_ar": "كلية العلوم",
+          "name_en": "Faculty of Science",
+          "entrance_nodes": [
+            "n_sci_entrance"
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                31.690904,
+                26.549147
+              ],
+              [
+                31.691607,
+                26.549147
+              ],
+              [
+                31.691607,
+                26.549461
+              ],
+              [
+                31.690904,
+                26.549461
+              ],
+              [
+                31.690904,
+                26.549147
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "id": "b_admin",
+          "name_ar": "المبنى الإداري",
+          "name_en": "Administration Building",
+          "entrance_nodes": [
+            "n_admin_entrance"
+          ]
+        }
+      }
+    ]
+  }
+}

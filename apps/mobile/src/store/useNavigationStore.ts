@@ -1,9 +1,15 @@
 import { create } from 'zustand';
+import { canStartNavigation } from '@baser/navigation';
+import type { NetworkPlan } from '@baser/navigation';
+import CampusNetworkService from '../services/CampusNetworkService';
 import { Route, RouteStep, NavigationPoint } from '@baser/types';
 import NavigationService from '../services/NavigationService';
 import VoiceService from '../services/VoiceService';
 
 interface NavigationState {
+  activeNetwork: NetworkPlan['network'] | null;
+  isCheckingRoute: boolean;
+  routeError: string;
   currentLocation: { latitude: number; longitude: number } | null;
   activeRoute: Route | null;
   routeSteps: RouteStep[];
@@ -17,10 +23,10 @@ interface NavigationState {
   isMuted: boolean;
 
   setCurrentLocation: (lat: number, lon: number) => void;
-  startNavigation: (route: Route, steps: RouteStep[], destination: NavigationPoint) => void;
+  startNavigation: (route: Route, steps: RouteStep[], destination: NavigationPoint, network?: NetworkPlan['network']) => boolean;
   stopNavigation: () => void;
-  nextStep: () => void;
-  prevStep: () => void;
+  nextStep: () => Promise<void>;
+  prevStep: () => Promise<void>;
   incrementDeviation: () => void;
   setLanguage: (lang: 'ar' | 'en') => void;
   setRoutePreference: (pref: 'fastest' | 'safe_accessible' | 'wheelchair' | 'blind_friendly') => void;
@@ -29,6 +35,9 @@ interface NavigationState {
 }
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
+  activeNetwork: null,
+  isCheckingRoute: false,
+  routeError: '',
   currentLocation: null,
   activeRoute: null,
   routeSteps: [],
@@ -43,8 +52,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
   setCurrentLocation: (latitude, longitude) => set({ currentLocation: { latitude, longitude } }),
 
-  startNavigation: (route, steps, destination) => {
+  startNavigation: (route, steps, destination, network) => {
+    if (route.id.startsWith('network:') && !network) return false;
+    if (destination.id !== route.end_point_id || !canStartNavigation(route, steps, get().routeTypePreference)) return false;
     set({
+      activeNetwork: network ?? null,
+      isCheckingRoute: false,
+      routeError: '',
       activeRoute: route,
       routeSteps: steps,
       currentStepIndex: 0,
@@ -62,10 +76,14 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     // Play audio/haptics
     NavigationService.speakStep(steps[0], isAr);
     NavigationService.triggerHaptic(steps[0]);
+    return true;
   },
 
   stopNavigation: () => {
     set({
+      activeNetwork: null,
+      isCheckingRoute: false,
+      routeError: '',
       activeRoute: null,
       routeSteps: [],
       currentStepIndex: 0,
@@ -74,7 +92,22 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     });
   },
 
-  nextStep: () => {
+  nextStep: async () => {
+    if (!get().isGuiding || get().isCheckingRoute) return;
+    const active = get().activeRoute;
+    const reference = get().activeNetwork;
+    if (reference) {
+      set({ isCheckingRoute: true });
+      try { await CampusNetworkService.checkActive(reference); }
+      catch (cause) {
+        if (get().activeRoute !== active) return;
+        const message = get().language === 'ar' && cause instanceof Error ? cause.message : 'Route availability could not be confirmed. Stop and recalculate or request assistance.';
+        set({ isGuiding: false, routeError: message });
+        VoiceService.speak(message);
+        return;
+      } finally { if (get().activeRoute === active) set({ isCheckingRoute: false }); }
+      if (get().activeRoute !== active || !get().isGuiding) return;
+    }
     const { routeSteps, currentStepIndex, language } = get();
     if (currentStepIndex < routeSteps.length - 1) {
       const nextIndex = currentStepIndex + 1;
@@ -90,7 +123,22 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     }
   },
 
-  prevStep: () => {
+  prevStep: async () => {
+    if (!get().isGuiding || get().isCheckingRoute) return;
+    const active = get().activeRoute;
+    const reference = get().activeNetwork;
+    if (reference) {
+      set({ isCheckingRoute: true });
+      try { await CampusNetworkService.checkActive(reference); }
+      catch (cause) {
+        if (get().activeRoute !== active) return;
+        const message = get().language === 'ar' && cause instanceof Error ? cause.message : 'Route availability could not be confirmed. Stop and recalculate or request assistance.';
+        set({ isGuiding: false, routeError: message });
+        VoiceService.speak(message);
+        return;
+      } finally { if (get().activeRoute === active) set({ isCheckingRoute: false }); }
+      if (get().activeRoute !== active || !get().isGuiding) return;
+    }
     const { routeSteps, currentStepIndex, language } = get();
     if (currentStepIndex > 0) {
       const prevIndex = currentStepIndex - 1;

@@ -13,7 +13,7 @@ import {
   StatusPill,
 } from '../src/components/BlindInterface';
 
-type RoutePath = '/destination' | '/qr-scanner' | '/where-am-i' | '/emergency' | '/report' | '/settings';
+type RoutePath = '/campus' | '/destination' | '/qr-scanner' | '/where-am-i' | '/emergency' | '/report' | '/settings';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -110,6 +110,15 @@ export default function HomeScreen() {
         onPress={() => navigateTo('/destination', 'اختيار الوجهة', 'destination selection')}
         accessibilityLabel={language === 'ar' ? 'اختر وجهتك' : 'Select destination'}
         accessibilityHint={language === 'ar' ? 'اضغط مرتين لفتح قائمة الوجهات' : 'Double tap to open destination search'}
+      />
+
+      <ActionTile
+        title={language === 'ar' ? 'التنقل بين مباني الحرم' : 'Navigate the campus'}
+        subtitle={language === 'ar' ? 'اختر نقطة البداية والمبنى للوصول عبر شبكة ميدانية متحققة.' : 'Choose your start and building on a field-verified outdoor network.'}
+        label="MAP" theme={theme}
+        onPress={() => navigateTo('/campus', 'الملاحة الخارجية', 'outdoor navigation')}
+        accessibilityLabel={language === 'ar' ? 'الملاحة الخارجية في الحرم' : 'Outdoor campus navigation'}
+        accessibilityHint={language === 'ar' ? 'اختيار نقطة البداية والمبنى المقصود' : 'Choose your start and destination building'}
       />
 
       <SectionHeader

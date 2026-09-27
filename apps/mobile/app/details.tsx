@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
 import SupabaseService from '../src/services/SupabaseService';
 import NavigationService from '../src/services/NavigationService';
+import { canStartNavigation } from '@baser/navigation';
 import { NavigationPoint, Route, RouteStep } from '@baser/types';
 import VoiceService from '../src/services/VoiceService';
 import {
@@ -29,58 +30,80 @@ export default function DetailsScreen() {
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState('');
+  const requestVersion = useRef(0);
+
   useEffect(() => {
+    const version = ++requestVersion.current;
+    let cancelled = false;
+    const current = () => !cancelled && requestVersion.current === version;
+    setRoute(null);
+    setSteps([]);
+    setPoint(null);
+    setError('');
     const loadRouteData = async () => {
       setLoading(true);
       try {
         const points = await SupabaseService.getNavigationPoints();
+        if (!current()) return;
         const dest = points.find(p => p.id === pointId);
-
-        if (!dest) return;
-        setPoint(dest);
-
-        const fallbackStartPoint = points.find(p => p.type === 'entrance' && p.id !== dest.id) || points.find(p => p.id !== dest.id);
-        const effectiveStartPointId = startPointId && startPointId !== dest.id ? startPointId : fallbackStartPoint?.id;
-
-        if (!effectiveStartPointId) {
-          VoiceService.speak(language === 'ar' ? 'نحتاج نقطة بداية مختلفة عن الوجهة لحساب المسار.' : 'A different start point is required to calculate a route.');
-          return;
+        setPoint(dest ?? null);
+        if (!dest) throw new Error(language === 'ar' ? 'الوجهة غير متاحة.' : 'Destination unavailable.');
+        if (!startPointId || startPointId === dest.id || !points.some(p => p.id === startPointId)) {
+          throw new Error(language === 'ar' ? 'امسح رمز QR في موقعك لتحديد نقطة بداية صحيحة، ثم اختر الوجهة.' : 'Scan a QR tag at your position to set a valid start, then choose your destination.');
         }
-
-        const routes = await NavigationService.getRoutesToDestination(effectiveStartPointId, dest.id);
+        const routes = await NavigationService.getRoutesToDestination(startPointId, dest.id);
         const bestRoute = NavigationService.selectBestRoute(routes, routeTypePreference);
-
-        if (bestRoute) {
-          setRoute(bestRoute);
-          const routeSteps = await SupabaseService.getRouteSteps(bestRoute.id);
-          setSteps(routeSteps);
-
-          const name = language === 'ar' ? dest.name_ar : dest.name_en;
-          const stairsText = bestRoute.has_stairs
-            ? (language === 'ar' ? 'يحتوي على سلالم' : 'contains stairs')
-            : (language === 'ar' ? 'خالي من السلالم' : 'has no stairs');
-          const vocalSummary = language === 'ar'
-            ? `تفاصيل الوجهة: ${name}. المسافة ${bestRoute.distance_meters} متر. الزمن المتوقع ${bestRoute.estimated_minutes} دقيقة. المسار ${stairsText}. اضغط زر بدء الإرشاد للمتابعة.`
-            : `Destination details: ${name}. Distance ${bestRoute.distance_meters} meters. Estimated time ${bestRoute.estimated_minutes} minutes. The path ${stairsText}. Press start guidance to continue.`;
-
-          VoiceService.speak(vocalSummary);
-        } else {
-          VoiceService.speak(language === 'ar' ? 'نعتذر، لم نجد مساراً مسجلاً لهذه الوجهة حالياً.' : 'Sorry, no registered path found for this destination.');
+        if (!bestRoute) throw new Error(language === 'ar' ? 'لا يوجد مسار متاح يطابق احتياجاتك الحالية.' : 'No available route meets your current needs.');
+        const routeSteps = await SupabaseService.getRouteSteps(bestRoute.id);
+        if (!canStartNavigation(bestRoute, routeSteps, routeTypePreference)) {
+          throw new Error(language === 'ar' ? 'خطوات المسار غير مكتملة أو غير مناسبة. تعذر بدء الإرشاد.' : 'Route steps are incomplete or unsuitable. Guidance is unavailable.');
         }
-      } catch (error) {
-        console.error('Error loading route details:', error);
+        if (!current()) return;
+        setRoute(bestRoute);
+        setSteps(routeSteps);
+        VoiceService.speak(language === 'ar'
+          ? `المسافة إلى ${dest.name_ar} هي ${bestRoute.distance_meters} متر. اضغط بدء الإرشاد للمتابعة.`
+          : `Distance to ${dest.name_en} is ${bestRoute.distance_meters} metres. Press start guidance to continue.`);
+      } catch (cause) {
+        if (!current()) return;
+        const message = cause instanceof Error ? cause.message : (language === 'ar' ? 'تعذر تحميل المسار.' : 'Could not load route.');
+        setError(message);
+        VoiceService.speak(message);
       } finally {
-        setLoading(false);
+        if (current()) setLoading(false);
       }
     };
-
-    if (pointId) loadRouteData();
+    loadRouteData();
+    return () => { cancelled = true; requestVersion.current++; };
   }, [pointId, startPointId, routeTypePreference, language]);
 
-  const handleStartNav = () => {
-    if (route && point) {
-      startNavigation(route, steps, point);
+  const handleStartNav = async () => {
+    if (!route || !point || !steps.length) return;
+    const version = requestVersion.current;
+    setLoading(true);
+    try {
+      // Recheck availability immediately before starting; a route may have closed since preview.
+      const routes = await NavigationService.getRoutesToDestination(route.start_point_id, point.id);
+      const fresh = routes.find(candidate => candidate.id === route.id);
+      const freshSteps = fresh ? await SupabaseService.getRouteSteps(fresh.id) : [];
+      if (version !== requestVersion.current) return;
+      if (!fresh || !startNavigation(fresh, freshSteps, point)) {
+        setRoute(null);
+        const message = language === 'ar' ? 'تغيرت حالة المسار أو لم يعد مناسباً. أعد اختيار الوجهة.' : 'The route changed or is no longer suitable. Select your destination again.';
+        setError(message);
+        VoiceService.speak(message);
+        return;
+      }
       router.push('/navigation');
+    } catch {
+      if (version !== requestVersion.current) return;
+      setRoute(null);
+      const message = language === 'ar' ? 'تعذر تأكيد إتاحة المسار. تحقق من الاتصال ثم أعد المحاولة.' : 'Could not confirm route availability. Check your connection and retry.';
+      setError(message);
+      VoiceService.speak(message);
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
     }
   };
 
@@ -99,8 +122,12 @@ export default function DetailsScreen() {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.background }]}>
         <Text style={[styles.errorText, { color: theme.danger }]}>
-          {language === 'ar' ? 'لا يوجد مسار جاهز لهذه الوجهة حالياً.' : 'No ready route is available for this destination.'}
+          {error || (language === 'ar' ? 'لا يوجد مسار جاهز لهذه الوجهة حالياً.' : 'No ready route is available for this destination.')}
         </Text>
+        <PrimaryButton theme={theme} title={language === 'ar' ? 'تحديد البداية عبر QR' : 'Set start with QR'}
+          accessibilityLabel={language === 'ar' ? 'مسح رمز الموقع' : 'Scan location tag'} onPress={() => router.replace('/qr-scanner')} />
+        <PrimaryButton theme={theme} title={language === 'ar' ? 'الوجهات' : 'Destinations'}
+          accessibilityLabel={language === 'ar' ? 'العودة للوجهات' : 'Back to destinations'} onPress={() => router.back()} />
       </View>
     );
   }

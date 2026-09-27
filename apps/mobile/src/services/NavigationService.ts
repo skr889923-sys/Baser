@@ -2,7 +2,7 @@ import { NavigationPoint, Route, RouteStep, RouteType } from '@baser/types';
 import SupabaseService from './SupabaseService';
 import VoiceService from './VoiceService';
 import HapticsService from './HapticsService';
-import * as Location from 'expo-location';
+import { selectBestRoute } from '@baser/navigation';
 
 class NavigationService {
   // Helper to calculate geospatial distance in meters using the Haversine formula
@@ -51,11 +51,11 @@ class NavigationService {
     const points = await SupabaseService.getNavigationPoints();
     if (points.length === 0) return null;
     
-    let nearestPoint = points[0];
+    let nearestPoint: NavigationPoint | null = null;
     let minDistance = Infinity;
 
     for (const point of points) {
-      if (point.latitude && point.longitude) {
+      if (point.latitude != null && point.longitude != null && Number.isFinite(point.latitude) && Number.isFinite(point.longitude)) {
         const dist = this.getDistance(latitude, longitude, point.latitude, point.longitude);
         if (dist < minDistance) {
           minDistance = dist;
@@ -69,40 +69,12 @@ class NavigationService {
   // Graph Fallback: using Supabase real points
   public async getRoutesToDestination(startPointId: string, destinationPointId: string): Promise<Route[]> {
     const routes = await SupabaseService.getRoutes();
-    const points = await SupabaseService.getNavigationPoints();
-    
-    const directRoutes = routes.filter(r => r.start_point_id === startPointId && r.end_point_id === destinationPointId);
-    if (directRoutes.length > 0) return directRoutes;
-
-    const destinationPoint = points.find(p => p.id === destinationPointId);
-    if (destinationPoint?.building_id) {
-      const entrancePoint = points.find(p => p.building_id === destinationPoint.building_id && p.type === 'entrance');
-      if (entrancePoint && entrancePoint.id !== startPointId) {
-        return routes.filter(r => r.start_point_id === startPointId && r.end_point_id === entrancePoint.id);
-      }
-    }
-
-    return [];
+    return routes.filter(r => r.start_point_id === startPointId && r.end_point_id === destinationPointId);
   }
 
   // Selects the best route based on user preference
   public selectBestRoute(routes: Route[], preference: RouteType): Route | null {
-    if (routes.length === 0) return null;
-    if (routes.length === 1) return routes[0];
-
-    const sorted = [...routes].sort((a, b) => {
-      if (preference === 'blind_friendly') {
-        if (a.visually_impaired_friendly && !b.visually_impaired_friendly) return -1;
-        if (!a.visually_impaired_friendly && b.visually_impaired_friendly) return 1;
-      }
-      if (preference === 'wheelchair' || preference === 'safe_accessible') {
-        if (a.wheelchair_accessible && !b.wheelchair_accessible) return -1;
-        if (!a.wheelchair_accessible && b.wheelchair_accessible) return 1;
-      }
-      return a.distance_meters - b.distance_meters;
-    });
-
-    return sorted[0];
+    return selectBestRoute(routes, preference);
   }
 
   // Speak the step direction and text

@@ -46,6 +46,7 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
   {
     title: 'بناء شبكة الملاحة',
     items: [
+      { href: '/networks', label: 'شبكات الحرم', description: 'المسح والمعاينة والنشر', icon: MapPinned },
       { href: '/maps', label: 'محرر الخريطة', description: 'رسم النقاط والمسارات', icon: Map },
       { href: '/buildings', label: 'المباني', description: 'الكليات والمرافق', icon: Building2 },
       { href: '/points', label: 'نقاط التوجيه', description: 'العقد والتعليمات', icon: MapPinned },
