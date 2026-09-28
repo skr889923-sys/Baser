@@ -10,6 +10,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--baseline', choices=['reset', 'init'], default='reset')
 parser.add_argument('--migration', type=pathlib.Path)
+parser.add_argument('--legacy-route-steps', action='store_true')
+parser.add_argument('--route-migration', type=pathlib.Path)
 args = parser.parse_args()
 for executable in ('initdb', 'pg_ctl', 'psql'):
     if not shutil.which(executable):
@@ -55,12 +57,49 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
         started = True
         command = ['psql','-X','-h',tmp,'-p','55440','-U','postgres','-d','postgres','-v','ON_ERROR_STOP=1','-q']
         phases = [('bootstrap',bootstrap),('baseline',baseline.read_text()),('fixtures',fixtures)]
+        if args.legacy_route_steps:
+            phases.append(('deployed legacy route schema', '''
+              alter table public.route_steps drop column direction;
+              alter table public.route_steps drop column warning_level;
+              alter table public.route_steps add column audio_url_ar text;
+              alter table public.route_steps add column audio_url_en text;
+              alter table public.route_steps alter column haptic_pattern drop not null;
+              alter table public.route_steps alter column haptic_pattern set default 'none';
+              alter table public.route_steps drop constraint route_steps_haptic_pattern_check;
+              alter table public.route_steps add constraint route_steps_haptic_pattern_check
+                check(haptic_pattern in ('none','short','long','double','sos'));
+              do $$ declare a uuid; b uuid; r uuid; begin
+                insert into public.navigation_points(name_ar,name_en,type,description_ar,description_en,audio_instruction_ar,audio_instruction_en)
+                values('أ','Legacy A','entrance','','','','') returning id into a;
+                insert into public.navigation_points(name_ar,name_en,type,description_ar,description_en,audio_instruction_ar,audio_instruction_en)
+                values('ب','Legacy B','entrance','','','','') returning id into b;
+                insert into public.routes(start_point_id,end_point_id,name_ar,name_en,route_type,distance_meters,estimated_minutes,has_stairs,has_ramp)
+                values(a,b,'قديم','Legacy retained route','fastest',10,1,false,false) returning id into r;
+                insert into public.route_steps(route_id,step_order,from_point_id,to_point_id,instruction_ar,instruction_en,distance_meters,haptic_pattern,audio_url_ar)
+                values(r,1,a,b,'تعليمات قديمة','Legacy retained step',10,'short','https://example.test/audio.mp3');
+              end $$;
+            '''))
         if args.migration:
             phases.append(('fix',args.migration.read_text()))
+        if args.route_migration:
+            phases.append(('route schema fix',args.route_migration.read_text()))
+            phases.append(('route schema idempotence',args.route_migration.read_text()))
         phases.append(('authenticated map editor inserts a point',editor_insert))
         if args.migration:
             phases.append(('idempotent reapplication',args.migration.read_text()))
             phases.append(('role and full map-save regressions',(ROOT / 'supabase/tests/map_editor_permissions.sql').read_text()))
+        if args.route_migration:
+            phases.append(('atomic route saving',(ROOT / 'supabase/tests/atomic_route_save.sql').read_text()))
+            if args.legacy_route_steps:
+                phases.append(('historical data preserved', '''
+                  do $$ begin
+                    if not exists(select 1 from public.route_steps where instruction_en='Legacy retained step'
+                      and direction is null and warning_level is null and haptic_pattern='short'
+                      and audio_url_ar='https://example.test/audio.mp3') then
+                      raise exception 'Legacy guidance was lost or fabricated';
+                    end if;
+                  end $$;
+                '''))
         for name, sql in phases:
             result = subprocess.run(command,input=sql,capture_output=True,text=True)
             if result.returncode:

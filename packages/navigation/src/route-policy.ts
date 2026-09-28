@@ -30,6 +30,9 @@ export function canStartNavigation(route: Route, steps: RouteStep[], preference:
       typeof step.instruction_ar === 'string' && !!step.instruction_ar.trim() &&
       typeof step.instruction_en === 'string' && !!step.instruction_en.trim() &&
       typeof step.direction === 'string' &&
+      ['straight','left','right','slight_left','slight_right','u_turn','stairs_up','stairs_down','elevator_up','elevator_down'].includes(step.direction) &&
+      ['continue','turn_left','turn_right','warning','arrived','emergency'].includes(step.haptic_pattern) &&
+      ['none','caution','danger'].includes(step.warning_level) &&
       (index === 0 || steps[index - 1].to_point_id === step.from_point_id) &&
       (!(preference === 'wheelchair' || preference === 'safe_accessible') || !step.direction.startsWith('stairs_'));
   });

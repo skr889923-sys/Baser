@@ -5,7 +5,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from '
 import L from 'leaflet';
 import { supabase } from '../lib/supabase';
 import { requireMapEditorAccess, mapWriteError } from '../lib/map-permissions';
-import type { NavigationPoint, Route } from '@baser/types';
+import { saveRouteWithFirstStep } from '../lib/save-route';
+import type { NavigationPoint, Route, RouteType } from '@baser/types';
 import 'leaflet/dist/leaflet.css';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -62,7 +63,7 @@ export default function MapEditorMap() {
   const [routeEnd, setRouteEnd] = useState<NavigationPoint | null>(null);
   const [routeNameAr, setRouteNameAr] = useState('');
   const [routeNameEn, setRouteNameEn] = useState('');
-  const [routeType, setRouteType] = useState<string>('blind_friendly');
+  const [routeType, setRouteType] = useState<RouteType>('blind_friendly');
   const [hasStairs, setHasStairs] = useState(false);
   const [hasRamp, setHasRamp] = useState(false);
 
@@ -148,8 +149,7 @@ export default function MapEditorMap() {
       // rough estimation: avg walking speed 1.4 m/s -> 84 m / min
       const estimatedMinutes = Math.max(1, Math.round(distance / 84));
 
-      // 1. Save Route
-      const { data: routeData, error: routeError } = await supabase.from('routes').insert([{
+      await saveRouteWithFirstStep(supabase, {
         start_point_id: routeStart.id,
         end_point_id: routeEnd.id,
         name_ar: routeNameAr || `مسار من ${routeStart.name_ar} إلى ${routeEnd.name_ar}`,
@@ -162,39 +162,21 @@ export default function MapEditorMap() {
         wheelchair_accessible: !hasStairs || hasRamp,
         visually_impaired_friendly: true,
         status: 'active'
-      }]).select().single();
-
-      if (routeError) {
-        setSaveError(mapWriteError(routeError));
-        return;
-      }
-
-      // 2. Save Auto-generated Route Step
-      const { error: stepError } = await supabase.from('route_steps').insert([{
-        route_id: routeData.id,
-        step_order: 1,
-        from_point_id: routeStart.id,
-        to_point_id: routeEnd.id,
+      }, {
         instruction_ar: `توجه من ${routeStart.name_ar} إلى ${routeEnd.name_ar} لمسافة ${distance} متر.`,
         instruction_en: `Proceed from ${routeStart.name_en} to ${routeEnd.name_en} for ${distance} meters.`,
-        distance_meters: distance,
         direction: 'straight',
         haptic_pattern: 'continue',
         warning_level: hasStairs ? 'caution' : 'none'
-      }]);
-
-      if (stepError) {
-        setSaveError(mapWriteError(stepError));
-      } else {
-        alert('تم حفظ المسار بنجاح!');
-        setRouteStart(null);
-        setRouteEnd(null);
-        setRouteNameAr('');
-        setRouteNameEn('');
-        fetchData();
-      }
+      });
+      alert('تم حفظ المسار بنجاح!');
+      setRouteStart(null);
+      setRouteEnd(null);
+      setRouteNameAr('');
+      setRouteNameEn('');
+      fetchData();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'تعذر الاتصال لحفظ المسار. أعد المحاولة.');
+      setSaveError(mapWriteError(error));
     } finally {
       setSaving(false);
     }
@@ -402,7 +384,7 @@ export default function MapEditorMap() {
                   <select 
                     className="border border-slate-300 p-3 rounded-xl mb-4 focus:ring-2 focus:ring-amber-500 focus:outline-none shrink-0" 
                     value={routeType} 
-                    onChange={(e) => setRouteType(e.target.value)}
+                    onChange={(e) => setRouteType(e.target.value as RouteType)}
                   >
                     <option value="blind_friendly">مهيأ للمكفوفين (Blind Friendly)</option>
                     <option value="fastest">الأسرع (Fastest)</option>

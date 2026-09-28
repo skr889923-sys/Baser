@@ -49,3 +49,18 @@ python3 scripts/test-map-permissions.py --baseline init --migration supabase/mig
 الاختبار ينشئ PostgreSQL مؤقتًا بلا اتصال شبكي، ويشغّل ملفات الإعداد الفعلية. يتحقق من الأدوار الإدارية الثلاثة، وحفظ النقاط والمسار وخطوته، وإعادة تطبيق الترحيل، ومنع الطالب والحساب بلا ملف والزائر من إضافة نقطة، ومنع ترقية الحساب لنفسه. لا يقرأ مفاتيح المشروع ولا يكتب إلى الإنتاج.
 
 مرجع آلية الأدوار والسياسات: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+## خطأ عمود direction عند حفظ مسار
+
+بعض قواعد البيانات القديمة تفتقد `route_steps.direction` و`warning_level`، وتقبل قيم اهتزاز مختلفة عن التطبيق. بعد ترحيل الصلاحيات أعلاه، طبّق `supabase/migrations/20260928100000_route_step_schema_and_atomic_save.sql` قبل نشر الواجهة الجديدة. يضيف الترحيل الحقلين ويحدّث القيم المقبولة ويطلب إعادة تحميل مخطط PostgREST.
+
+الترحيل يحافظ على التسجيلات الصوتية وقيم الاهتزاز القديمة، ويترك الاتجاه والتحذير غير المعروفين فارغين لمراجعة المحرر. لا يستنتج تعليمات ملاحة لخطوات تاريخية، ولا يحذف المسارات الناقصة الناتجة عن محاولات حفظ سابقة. يمنع تطبيق الملاحة بدء مسار بخطوات ذات اتجاه أو اهتزاز أو تحذير غير مدعوم.
+
+تحفظ الواجهة المسار وخطوته الأولى عبر `create_route_with_first_step` في عملية واحدة؛ إذا فشلت الخطوة يُلغى إدراج المسار أيضًا. تعمل الدالة بصلاحيات المتصل وسياسات RLS نفسها.
+
+```sh
+python3 scripts/test-map-permissions.py --legacy-route-steps --migration supabase/migrations/20260928090000_map_editor_permissions.sql --route-migration supabase/migrations/20260928100000_route_step_schema_and_atomic_save.sql
+python3 scripts/test-map-permissions.py --baseline init --migration supabase/migrations/20260928090000_map_editor_permissions.sql --route-migration supabase/migrations/20260928100000_route_step_schema_and_atomic_save.sql
+```
+
+يتحقق الاختبار من حفظ مسار كامل، والتراجع عن المسار عند فشل خطوته، ورفض البيانات الناقصة والحسابات غير المخولة، والحفاظ على البيانات القديمة عند إعادة تطبيق الترحيل.

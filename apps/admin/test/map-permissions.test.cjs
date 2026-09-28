@@ -55,3 +55,8 @@ test('map save explains RLS and recursive policy errors in Arabic', () => {
 test('unrelated write failures retain their diagnostic message', () => {
   assert.match(mapWriteError({ code: '23503', message: 'Invalid building' }), /Invalid building/);
 });
+test('schema-cache failures explain that the database update is needed', () => {
+  for (const code of ['PGRST202', 'PGRST204', '42703', '42883']) {
+    assert.match(mapWriteError({ code, message: 'Schema mismatch' }), /تحديث قاعدة البيانات/);
+  }
+});

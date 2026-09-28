@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { requireMapEditorAccess, mapWriteError } from '@/lib/map-permissions';
+import { saveRouteWithFirstStep, type FirstStep } from '@/lib/save-route';
 import {
   DirectionType,
   HapticPatternType,
@@ -140,66 +142,49 @@ export default function RoutesPage() {
     }
 
     setSaving(true);
+    try {
+      await requireMapEditorAccess(supabase);
+      const start = pointsById[form.start_point_id];
+      const end = pointsById[form.end_point_id];
+      const distance = buildRouteDistance();
+      const estimatedMinutes = form.estimated_minutes
+        ? Number(form.estimated_minutes)
+        : Math.max(1, Math.round(distance / 84));
 
-    const start = pointsById[form.start_point_id];
-    const end = pointsById[form.end_point_id];
-    const distance = buildRouteDistance();
-    const estimatedMinutes = form.estimated_minutes
-      ? Number(form.estimated_minutes)
-      : Math.max(1, Math.round(distance / 84));
+      const routePayload = {
+        start_point_id: form.start_point_id,
+        end_point_id: form.end_point_id,
+        name_ar: form.name_ar || `من ${start?.name_ar || 'نقطة البداية'} إلى ${end?.name_ar || 'نقطة النهاية'}`,
+        name_en: form.name_en || `From ${start?.name_en || 'start'} to ${end?.name_en || 'destination'}`,
+        route_type: form.route_type,
+        distance_meters: distance,
+        estimated_minutes: estimatedMinutes,
+        has_stairs: form.has_stairs,
+        has_ramp: form.has_ramp,
+        wheelchair_accessible: form.wheelchair_accessible,
+        visually_impaired_friendly: form.visually_impaired_friendly,
+        status: 'active' as RouteStatus,
+      };
 
-    const routePayload = {
-      start_point_id: form.start_point_id,
-      end_point_id: form.end_point_id,
-      name_ar: form.name_ar || `من ${start?.name_ar || 'نقطة البداية'} إلى ${end?.name_ar || 'نقطة النهاية'}`,
-      name_en: form.name_en || `From ${start?.name_en || 'start'} to ${end?.name_en || 'destination'}`,
-      route_type: form.route_type,
-      distance_meters: distance,
-      estimated_minutes: estimatedMinutes,
-      has_stairs: form.has_stairs,
-      has_ramp: form.has_ramp,
-      wheelchair_accessible: form.wheelchair_accessible,
-      visually_impaired_friendly: form.visually_impaired_friendly,
-      status: 'active' as RouteStatus,
-    };
+      const stepPayload: FirstStep = {
+        instruction_ar: form.instruction_ar || `توجه من ${start?.name_ar || 'نقطة البداية'} إلى ${end?.name_ar || 'نقطة النهاية'} لمسافة ${distance} متر.`,
+        instruction_en: form.instruction_en || `Proceed from ${start?.name_en || 'start'} to ${end?.name_en || 'destination'} for ${distance} meters.`,
+        direction: form.direction,
+        haptic_pattern: form.haptic_pattern,
+        warning_level: form.has_stairs ? 'caution' : 'none',
+      };
 
-    const { data: routeData, error: routeError } = await supabase
-      .from('routes')
-      .insert([routePayload])
-      .select()
-      .single();
+      const routeData = await saveRouteWithFirstStep(supabase, routePayload, stepPayload);
 
-    if (routeError || !routeData) {
-      console.error(routeError);
-      alert('تعذر حفظ المسار.');
+      setForm(EMPTY_FORM);
+      setShowAddForm(false);
+      setSelectedRouteId(routeData.id);
+      await fetchData();
+    } catch (error) {
+      alert(mapWriteError(error));
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const stepPayload = {
-      route_id: routeData.id,
-      step_order: 1,
-      from_point_id: form.start_point_id,
-      to_point_id: form.end_point_id,
-      instruction_ar: form.instruction_ar || `توجه من ${start?.name_ar || 'نقطة البداية'} إلى ${end?.name_ar || 'نقطة النهاية'} لمسافة ${distance} متر.`,
-      instruction_en: form.instruction_en || `Proceed from ${start?.name_en || 'start'} to ${end?.name_en || 'destination'} for ${distance} meters.`,
-      distance_meters: distance,
-      direction: form.direction,
-      haptic_pattern: form.haptic_pattern,
-      warning_level: form.has_stairs ? 'caution' : 'none',
-    };
-
-    const { error: stepError } = await supabase.from('route_steps').insert([stepPayload]);
-    if (stepError) {
-      console.error(stepError);
-      alert('تم حفظ المسار، لكن تعذر حفظ الخطوة الأولى.');
-    }
-
-    setForm(EMPTY_FORM);
-    setShowAddForm(false);
-    setSelectedRouteId(routeData.id);
-    await fetchData();
-    setSaving(false);
   };
 
   const updateRouteStatus = async (id: string, status: RouteStatus) => {

@@ -15,7 +15,13 @@ export async function requireMapEditorAccess(client: SupabaseClient): Promise<vo
   }
 }
 
-export function mapWriteError(error: { code?: string; message: string }): string {
+export function mapWriteError(cause: unknown): string {
+  const error = cause && typeof cause === 'object' && 'message' in cause
+    ? { message: String(cause.message), code: 'code' in cause ? String(cause.code) : undefined }
+    : { message: 'تعذر الاتصال. أعد المحاولة.', code: undefined };
+  if (['PGRST202', 'PGRST204', '42703', '42883'].includes(error.code ?? '')) {
+    return 'يلزم تحديث قاعدة البيانات لتوافق إصدار التطبيق. اطلب من مسؤول النظام تطبيق تحديث خطوات المسار، ثم أعد المحاولة.';
+  }
   if (error.code === '42501' || error.code === '42P17') {
     return 'رفضت قاعدة البيانات الحفظ بسبب إعدادات الصلاحيات. اطلب من مسؤول النظام تحديث صلاحيات محرر الخرائط، ثم أعد المحاولة.';
   }
