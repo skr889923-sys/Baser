@@ -11,7 +11,7 @@
     "dev:mobile": "npm run start --workspace=apps/mobile",
     "build:admin": "npm run build --workspace=apps/admin",
     "lint": "eslint .",
-    "test": "tsc -p packages/navigation/tsconfig.test.json && node --test packages/navigation/test/*.test.cjs"
+    "test": "tsc -p packages/navigation/tsconfig.test.json && node --test packages/navigation/test/*.test.cjs apps/admin/test/*.test.cjs"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

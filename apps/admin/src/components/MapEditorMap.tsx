@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../lib/supabase';
+import { requireMapEditorAccess, mapWriteError } from '../lib/map-permissions';
 import type { NavigationPoint, Route } from '@baser/types';
 import 'leaflet/dist/leaflet.css';
 
@@ -45,6 +46,8 @@ export default function MapEditorMap() {
   const [points, setPoints] = useState<NavigationPoint[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   
   const [mode, setMode] = useState<EditorMode>('add_point');
 
@@ -98,84 +101,102 @@ export default function MapEditorMap() {
   };
 
   const handleSavePoint = async () => {
-    if (!newPointLocation) return;
-    const { error } = await supabase.from('navigation_points').insert([{
-      name_ar: nameAr || 'نقطة جديدة',
-      name_en: nameEn || 'New Point',
-      type: pointType,
-      latitude: newPointLocation[0],
-      longitude: newPointLocation[1],
-      description_ar: 'تم إنشاؤه عبر لوحة التحكم',
-      description_en: 'Created via admin panel',
-      audio_instruction_ar: '',
-      audio_instruction_en: '',
-      is_accessible: true,
-      is_hazard: false,
-      is_active: true
-    }]);
+    if (!newPointLocation || saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await requireMapEditorAccess(supabase);
+      const { error } = await supabase.from('navigation_points').insert([{
+        name_ar: nameAr || 'نقطة جديدة',
+        name_en: nameEn || 'New Point',
+        type: pointType,
+        latitude: newPointLocation[0],
+        longitude: newPointLocation[1],
+        description_ar: 'تم إنشاؤه عبر لوحة التحكم',
+        description_en: 'Created via admin panel',
+        audio_instruction_ar: '',
+        audio_instruction_en: '',
+        is_accessible: true,
+        is_hazard: false,
+        is_active: true
+      }]);
 
-    if (error) alert('Error: ' + error.message);
-    else {
-      alert('تم حفظ النقطة بنجاح!');
-      setNewPointLocation(null);
-      fetchData();
+      if (error) setSaveError(mapWriteError(error));
+      else {
+        alert('تم حفظ النقطة بنجاح!');
+        setNewPointLocation(null);
+        fetchData();
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'تعذر الاتصال لحفظ النقطة. أعد المحاولة.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleSaveRoute = async () => {
-    if (!routeStart || !routeEnd) return;
-    
-    const distance = getDistance(
-      routeStart.latitude!, routeStart.longitude!, 
-      routeEnd.latitude!, routeEnd.longitude!
-    );
-    // rough estimation: avg walking speed 1.4 m/s -> 84 m / min
-    const estimatedMinutes = Math.max(1, Math.round(distance / 84));
+    if (!routeStart || !routeEnd || saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await requireMapEditorAccess(supabase);
 
-    // 1. Save Route
-    const { data: routeData, error: routeError } = await supabase.from('routes').insert([{
-      start_point_id: routeStart.id,
-      end_point_id: routeEnd.id,
-      name_ar: routeNameAr || `مسار من ${routeStart.name_ar} إلى ${routeEnd.name_ar}`,
-      name_en: routeNameEn || `Route from ${routeStart.name_en} to ${routeEnd.name_en}`,
-      route_type: routeType,
-      distance_meters: distance,
-      estimated_minutes: estimatedMinutes,
-      has_stairs: hasStairs,
-      has_ramp: hasRamp,
-      wheelchair_accessible: !hasStairs || hasRamp,
-      visually_impaired_friendly: true,
-      status: 'active'
-    }]).select().single();
+      const distance = getDistance(
+        routeStart.latitude!, routeStart.longitude!,
+        routeEnd.latitude!, routeEnd.longitude!
+      );
+      // rough estimation: avg walking speed 1.4 m/s -> 84 m / min
+      const estimatedMinutes = Math.max(1, Math.round(distance / 84));
 
-    if (routeError) {
-      alert('Error saving route: ' + routeError.message);
-      return;
-    }
+      // 1. Save Route
+      const { data: routeData, error: routeError } = await supabase.from('routes').insert([{
+        start_point_id: routeStart.id,
+        end_point_id: routeEnd.id,
+        name_ar: routeNameAr || `مسار من ${routeStart.name_ar} إلى ${routeEnd.name_ar}`,
+        name_en: routeNameEn || `Route from ${routeStart.name_en} to ${routeEnd.name_en}`,
+        route_type: routeType,
+        distance_meters: distance,
+        estimated_minutes: estimatedMinutes,
+        has_stairs: hasStairs,
+        has_ramp: hasRamp,
+        wheelchair_accessible: !hasStairs || hasRamp,
+        visually_impaired_friendly: true,
+        status: 'active'
+      }]).select().single();
 
-    // 2. Save Auto-generated Route Step
-    const { error: stepError } = await supabase.from('route_steps').insert([{
-      route_id: routeData.id,
-      step_order: 1,
-      from_point_id: routeStart.id,
-      to_point_id: routeEnd.id,
-      instruction_ar: `توجه من ${routeStart.name_ar} إلى ${routeEnd.name_ar} لمسافة ${distance} متر.`,
-      instruction_en: `Proceed from ${routeStart.name_en} to ${routeEnd.name_en} for ${distance} meters.`,
-      distance_meters: distance,
-      direction: 'straight',
-      haptic_pattern: 'continue',
-      warning_level: hasStairs ? 'caution' : 'none'
-    }]);
+      if (routeError) {
+        setSaveError(mapWriteError(routeError));
+        return;
+      }
 
-    if (stepError) {
-      alert('Error saving route step: ' + stepError.message);
-    } else {
-      alert('تم حفظ المسار بنجاح!');
-      setRouteStart(null);
-      setRouteEnd(null);
-      setRouteNameAr('');
-      setRouteNameEn('');
-      fetchData();
+      // 2. Save Auto-generated Route Step
+      const { error: stepError } = await supabase.from('route_steps').insert([{
+        route_id: routeData.id,
+        step_order: 1,
+        from_point_id: routeStart.id,
+        to_point_id: routeEnd.id,
+        instruction_ar: `توجه من ${routeStart.name_ar} إلى ${routeEnd.name_ar} لمسافة ${distance} متر.`,
+        instruction_en: `Proceed from ${routeStart.name_en} to ${routeEnd.name_en} for ${distance} meters.`,
+        distance_meters: distance,
+        direction: 'straight',
+        haptic_pattern: 'continue',
+        warning_level: hasStairs ? 'caution' : 'none'
+      }]);
+
+      if (stepError) {
+        setSaveError(mapWriteError(stepError));
+      } else {
+        alert('تم حفظ المسار بنجاح!');
+        setRouteStart(null);
+        setRouteEnd(null);
+        setRouteNameAr('');
+        setRouteNameEn('');
+        fetchData();
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'تعذر الاتصال لحفظ المسار. أعد المحاولة.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -201,6 +222,7 @@ export default function MapEditorMap() {
 
   return (
     <div className="flex flex-col h-full min-h-0 w-full relative">
+      {saveError && <p role="alert" className="bg-red-50 text-red-800 border-b border-red-200 p-4 font-semibold">{saveError}</p>}
       {/* Top Bar for Mode Switching */}
       <div className="bg-white p-3 border-b flex flex-col sm:flex-row justify-center gap-2 sm:gap-4 z-[1000] shadow-sm">
         <button 
@@ -323,6 +345,7 @@ export default function MapEditorMap() {
               <button 
                 className="bg-sky-600 text-white font-bold py-3.5 rounded-xl hover:bg-sky-700 transition-colors shadow-md mt-auto shrink-0"
                 onClick={handleSavePoint}
+                disabled={saving}
               >
                 💾 حفظ النقطة
               </button>
@@ -401,6 +424,7 @@ export default function MapEditorMap() {
                   <button 
                     className="bg-amber-500 text-slate-900 font-bold py-3.5 rounded-xl hover:bg-amber-600 transition-colors shadow-md mt-auto shrink-0"
                     onClick={handleSaveRoute}
+                    disabled={saving}
                   >
                     🚀 حفظ المسار
                   </button>
