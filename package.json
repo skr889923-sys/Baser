@@ -11,9 +11,13 @@
     "dev:mobile": "npm run start --workspace=apps/mobile",
     "build:admin": "npm run build --workspace=apps/admin",
     "lint": "eslint .",
-    "test": "tsc -p packages/navigation/tsconfig.test.json && node --test packages/navigation/test/*.test.cjs apps/admin/test/*.test.cjs"
+    "test": "tsc -p packages/navigation/tsconfig.test.json && node --test packages/navigation/test/*.test.cjs apps/admin/test/*.test.cjs apps/mobile/test/*.test.cjs"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/parser": "^8.71.0",
+    "eslint": "^10.12.0",
+    "globals": "^16.5.0",
     "typescript": "^5.0.0"
   }
 }

@@ -64,7 +64,7 @@ export default function RootLayout() {
         });
     }
 
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production' && !isLocalhost) {
       navigator.serviceWorker.register('/sw.js').catch(error => {
         console.warn('[Baseera Mobile] Service worker registration failed:', error);
       });

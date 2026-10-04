@@ -19,13 +19,14 @@ export interface Building {
   id: string;
   name_ar: string;
   name_en: string;
-  description_ar: string;
-  description_en: string;
-  type: BuildingType;
-  latitude: number;
-  longitude: number;
+  code?: string;
+  description_ar: string | null;
+  description_en: string | null;
+  type?: BuildingType;
+  latitude: number | null;
+  longitude: number | null;
   address_text?: string;
-  is_accessible: boolean;
+  is_accessible?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -118,8 +119,10 @@ export interface RouteStep {
 
 export interface QRCode {
   id: string;
-  navigation_point_id: string;
+  navigation_point_id: string | null;
   code_content: string;
+  location_description_ar?: string | null;
+  location_description_en?: string | null;
   qr_image_url?: string;
   scan_count: number;
   last_scanned_at?: string;
@@ -135,11 +138,11 @@ export interface VoiceCharacter {
 
 export interface VoiceRecording {
   id: string;
-  character_id: string;
+  character_id: string | null;
   phrase_key: string;
   audio_url: string;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at?: string;
 }
 
 export type ReportType = 'obstacle' | 'closed_door' | 'broken_elevator' | 'maintenance_work' | 'crowded' | 'qr_issue' | 'routing_issue';
@@ -161,7 +164,15 @@ export interface Report {
   updated_at: string;
 }
 
-export type EmergencyStatus = 'new' | 'contacted' | 'arrived' | 'resolved';
+export type EmergencyStatus = 'new' | 'contacted' | 'arrived' | 'resolved' | 'cancelled';
+
+export interface RequestReceipt {
+  id: string;
+  status: EmergencyStatus | ReportStatus;
+  created_at: string;
+  updated_at: string;
+  location_available: boolean;
+}
 
 export interface EmergencyRequest {
   id: string;

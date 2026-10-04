@@ -27,7 +27,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Baser to use your location for precise indoor navigation."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "baser"
   }

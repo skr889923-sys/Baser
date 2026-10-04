@@ -12,16 +12,19 @@
     "ts:check": "tsc"
   },
   "dependencies": {
+    "@baser/navigation": "*",
     "@baser/types": "*",
     "@opentelemetry/api": "^1.9.1",
     "@supabase/supabase-js": "^2.108.2",
     "expo": "~51.0.0",
     "expo-camera": "~15.0.0",
     "expo-constants": "~16.0.2",
+    "expo-crypto": "~13.0.2",
     "expo-haptics": "~13.0.0",
     "expo-linking": "~6.3.1",
     "expo-location": "~17.0.1",
     "expo-router": "~3.5.0",
+    "expo-secure-store": "~13.0.2",
     "expo-speech": "~12.0.0",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
@@ -32,8 +35,7 @@
     "react-native-screens": "3.31.1",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "^0.19.13",
-    "zustand": "^4.5.2",
-    "@baser/navigation": "*"
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/react": "~18.2.45",

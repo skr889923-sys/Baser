@@ -1,4 +1,4 @@
-import { Building, NavigationPoint, Route, RouteStep, Report, EmergencyRequest, QRCode } from '@baser/types';
+import { Building, NavigationPoint, Route, RouteStep, QRCode } from '@baser/types';
 import { supabase } from '../lib/supabase';
 
 class SupabaseService {
@@ -71,7 +71,7 @@ class SupabaseService {
   }
 
   public async getNavigationPointById(pointId: string): Promise<NavigationPoint | undefined> {
-    const { data, error } = await supabase.from('navigation_points').select('*').eq('id', pointId).single();
+    const { data, error } = await supabase.from('navigation_points').select('*').eq('id', pointId).eq('is_active', true).single();
     if (error) {
       console.error('[SupabaseService] Error fetching navigation point by id:', error);
       return undefined;
@@ -79,48 +79,11 @@ class SupabaseService {
     return data || undefined;
   }
 
-  public async submitReport(report: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'status'>): Promise<Report | null> {
-    const { data, error } = await supabase.from('reports').insert([{ ...report, status: 'new' }]).select().single();
-    if (error) {
-      console.error('[SupabaseService] Error submitting report:', error);
-      return null;
-    }
-    return data;
-  }
 
-  public async submitEmergency(emergency: Omit<EmergencyRequest, 'id' | 'created_at' | 'updated_at' | 'status'>): Promise<EmergencyRequest | null> {
-    const { data, error } = await supabase.from('emergency_requests').insert([{ ...emergency, status: 'new' }]).select().single();
-    if (error) {
-      console.error('[SupabaseService] Error submitting emergency:', error);
-      return null;
-    }
-    return data;
-  }
-
-  public async logQRScan(pointId: string, userId?: string | null): Promise<void> {
-    const qrCode = await this.getQRCode(pointId);
-    if (!qrCode) return;
-
-    const { error: logError } = await supabase.from('qr_scan_logs').insert([{
-      user_id: userId || null,
-      qr_code_id: qrCode.id,
-    }]);
-
-    if (logError) {
-      console.error('[SupabaseService] Error logging QR scan:', logError);
-    }
-
-    const { error: updateError } = await supabase
-      .from('qr_codes')
-      .update({
-        scan_count: (qrCode.scan_count || 0) + 1,
-        last_scanned_at: new Date().toISOString(),
-      })
-      .eq('id', qrCode.id);
-
-    if (updateError) {
-      console.error('[SupabaseService] Error updating QR scan count:', updateError);
-    }
+  public async logQRScan(content: string): Promise<void> {
+    const { error } = await supabase.rpc('record_qr_scan', { qr_content: content });
+    // Scan telemetry must not prevent valid positioning, and must never change a QR binding.
+    if (error) console.warn('[SupabaseService] QR scan could not be recorded');
   }
 }
 

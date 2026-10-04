@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -25,6 +25,7 @@ export default function QRScannerScreen() {
   const [scanning, setScanning] = useState(true);
   const [scannedPoint, setScannedPoint] = useState<NavigationPoint | null>(null);
   const [loading, setLoading] = useState(false);
+  const scanLock = useRef(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,19 +37,20 @@ export default function QRScannerScreen() {
   }, [language]);
 
   const handleBarcodeScanned = async ({ data }: { type: string; data: string }) => {
-    if (!scanning || loading) return;
+    if (!scanning || scanLock.current) return;
+    scanLock.current = true;
     setScanning(false);
     setLoading(true);
     setErrorMsg(null);
-    HapticsService.trigger('arrived');
 
     try {
       const qrCode = await SupabaseService.getQRCodeByContent(data);
       if (qrCode && qrCode.navigation_point_id) {
         const point = await SupabaseService.getNavigationPointById(qrCode.navigation_point_id);
-        if (point) {
+        if (point?.is_active) {
           setScannedPoint(point);
-          await SupabaseService.logQRScan(point.id);
+          HapticsService.trigger('arrived');
+          void SupabaseService.logQRScan(data).catch(() => {});
 
           VoiceService.speak(
             language === 'ar'
@@ -69,37 +71,8 @@ export default function QRScannerScreen() {
     }
   };
 
-  const handleSimulateScan = async () => {
-    if (!scanning || loading) return;
-    setScanning(false);
-    setLoading(true);
-    setErrorMsg(null);
-    HapticsService.trigger('arrived');
-
-    try {
-      const points = await SupabaseService.getNavigationPoints();
-      const point = points.find(p => p.type === 'entrance') || points[0];
-
-      if (point) {
-        setScannedPoint(point);
-        await SupabaseService.logQRScan(point.id);
-        VoiceService.speak(
-          language === 'ar'
-            ? `تم مسح الرمز بنجاح. أنت الآن عند ${point.name_ar}. اختر أحد الخيارات للمتابعة.`
-            : `Scan successful. You are at ${point.name_en}. Choose an option to continue.`
-        );
-      } else {
-        setErrorMsg(language === 'ar' ? 'لا توجد نقاط ملاحية متاحة للمحاكاة.' : 'No navigation points available for simulation.');
-      }
-    } catch (error) {
-      console.error(error);
-      setErrorMsg(language === 'ar' ? 'تعذرت المحاكاة.' : 'Simulation failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleReset = () => {
+    scanLock.current = false;
     setScannedPoint(null);
     setErrorMsg(null);
     setScanning(true);
@@ -161,14 +134,7 @@ export default function QRScannerScreen() {
 
         {errorMsg ? <Text style={[styles.errorText, { color: theme.danger }]}>{errorMsg}</Text> : null}
 
-        <PrimaryButton
-          theme={theme}
-          title={language === 'ar' ? 'محاكاة مسح للتجربة' : 'Simulate scan for testing'}
-          onPress={handleSimulateScan}
-          variant="secondary"
-          accessibilityLabel={language === 'ar' ? 'محاكاة مسح رمز' : 'Simulate QR scan'}
-          accessibilityHint={language === 'ar' ? 'اضغط مرتين لتجربة نتيجة المسح بدون كاميرا' : 'Double tap to test scan result without camera'}
-        />
+
       </ScreenShell>
     );
   }

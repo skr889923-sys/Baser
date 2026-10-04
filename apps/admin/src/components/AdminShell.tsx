@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -23,6 +23,8 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import type { UserRole } from '@baser/types';
+import { canAccessPage, getAdminIdentity } from '@/lib/admin-access';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -79,6 +81,11 @@ function isActivePath(pathname: string, href: string) {
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [accessError, setAccessError] = useState('');
+  const [authRevision, setAuthRevision] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -89,16 +96,26 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser(data.user);
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      setRole(null); setUser(null); setChecking(true);
+      setAuthRevision(value => value + 1);
     });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => authListener.subscription.unsubscribe();
+    return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (pathname === '/login') return;
+    let current = true;
+    setChecking(true); setAccessError('');
+    getAdminIdentity(supabase).then(identity => {
+      if (!current) return;
+      if (!identity) { setUser(null); setRole(null); router.replace('/login'); return; }
+      setUser(identity.user); setRole(identity.role);
+    }).catch(cause => {
+      if (current) { setRole(null); setAccessError(cause instanceof Error ? cause.message : 'تعذر التحقق من الصلاحيات.'); }
+    }).finally(() => { if (current) setChecking(false); });
+    return () => { current = false; };
+  }, [pathname, authRevision, router]);
 
   useEffect(() => {
     const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
@@ -113,7 +130,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         });
     }
 
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production' && !isLocalhost) {
       navigator.serviceWorker.register('/sw.js').catch(error => {
         console.warn('[Baseera Admin] Service worker registration failed:', error);
       });
@@ -135,6 +152,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   if (pathname === '/login') {
     return <>{children}</>;
   }
+
+  if (checking) return <main className="p-10 text-center" role="status">جاري التحقق من جلسة الدخول والصلاحيات…</main>;
+  if (!canAccessPage(role, pathname)) return (
+    <main className="mx-auto max-w-xl space-y-5 p-10 text-center">
+      <p role="alert">{accessError || 'لا يملك حسابك صلاحية الوصول إلى هذه الصفحة.'}</p>
+      {role ? <Link className="primary-action" href="/">العودة للوحة التحكم</Link> : null}
+      <button className="secondary-action" onClick={() => setAuthRevision(value => value + 1)}>إعادة التحقق</button>
+      <button className="secondary-action" onClick={async () => { await supabase.auth.signOut(); router.replace('/login'); }}>تسجيل الدخول بحساب آخر</button>
+    </main>
+  );
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -185,7 +212,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </div>
 
       <nav className="relative flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="التنقل الرئيسي">
-        {navSections.map(section => (
+        {navSections.map(section => ({ ...section, items: section.items.filter(item => canAccessPage(role, item.href)) })).filter(section => section.items.length).map(section => (
           <section key={section.title} aria-labelledby={`nav-${section.title}`}>
             <h2
               id={`nav-${section.title}`}
@@ -238,7 +265,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-white">{user?.email || 'مسؤول النظام'}</p>
-              <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">حساب تشغيل تجريبي</p>
+              <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">حساب فريق التشغيل</p>
             </div>
           </div>
         </div>
@@ -301,7 +328,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <div className="flex items-center gap-2">
               <div className="hidden items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-black text-amber-800 md:flex">
                 <CircleDashed className="h-4 w-4" />
-                وضع تجريبي
+                دخول محمي
               </div>
               {installPrompt ? (
                 <button

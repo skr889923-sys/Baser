@@ -162,6 +162,7 @@ type ActionTileProps = {
   selected?: boolean;
   danger?: boolean;
   compact?: boolean;
+  disabled?: boolean;
 };
 
 export function ActionTile({
@@ -175,6 +176,7 @@ export function ActionTile({
   selected = false,
   danger = false,
   compact = false,
+  disabled = false,
 }: ActionTileProps) {
   const borderColor = danger ? theme.danger : selected ? theme.accent : theme.borderSoft;
   const backgroundColor = danger ? theme.dangerSurface : selected ? theme.accentDark : theme.surface;
@@ -189,13 +191,15 @@ export function ActionTile({
           borderColor,
         },
         shadowStyle(theme.shadow, 'tile'),
+        disabled && componentStyles.disabled,
       ]}
       onPress={onPress}
+      disabled={disabled}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       activeOpacity={0.8}
     >
       <View style={componentStyles.tileHeader}>

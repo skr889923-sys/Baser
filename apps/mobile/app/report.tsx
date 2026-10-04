@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useNavigationStore } from '../src/store/useNavigationStore';
-import SupabaseService from '../src/services/SupabaseService';
-import NavigationService from '../src/services/NavigationService';
+import RequestService from '../src/services/RequestService';
+import { requestErrorMessage } from '../src/services/request-client';
+import { requestCoordinates } from '../src/services/request-location';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
-import { ReportType } from '@baser/types';
+import { ReportType, RequestReceipt } from '@baser/types';
 import * as Location from 'expo-location';
 import {
   ActionTile,
@@ -51,6 +52,13 @@ const reportTypes: Array<{ key: ReportType; ar: string; en: string; code: string
   },
 ];
 
+const reportStatusLabels: Partial<Record<RequestReceipt['status'], { ar: string; en: string }>> = {
+  new: { ar: 'بانتظار المراجعة', en: 'Awaiting review' },
+  investigating: { ar: 'قيد المعالجة', en: 'Under investigation' },
+  resolved: { ar: 'تم الحل بحسب الإدارة', en: 'Resolved by staff' },
+  rejected: { ar: 'لم يُقبل البلاغ', en: 'Report rejected' },
+};
+
 export default function ReportScreen() {
   const router = useRouter();
   const { language, isHighContrast } = useNavigationStore();
@@ -58,7 +66,19 @@ export default function ReportScreen() {
 
   const [reportType, setReportType] = useState<ReportType>('obstacle');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [receipt, setReceipt] = useState<RequestReceipt | null>(null);
+  const [error, setError] = useState('');
+  const locked = useRef(false);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    RequestService.resume('report').then(saved => { if (mounted.current) setReceipt(saved); })
+      .catch(cause => { if (mounted.current) setError(requestErrorMessage(cause, language)); })
+      .finally(() => { if (mounted.current) setLoading(false); });
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     VoiceService.speak(
@@ -75,54 +95,68 @@ export default function ReportScreen() {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    HapticsService.trigger('continue');
-
+    if (locked.current || loading || receipt) return;
+    locked.current = true;
+    setLoading(true); setError('');
     try {
-      let latitude: number | null = null;
-      let longitude: number | null = null;
-      let navigationPointId: string | null = null;
-      let buildingId: string | null = null;
-
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const currentLocation = await Location.getCurrentPositionAsync({});
-          latitude = currentLocation.coords.latitude;
-          longitude = currentLocation.coords.longitude;
-
-          const nearestPoint = await NavigationService.getNearestPoint(latitude, longitude);
-          navigationPointId = nearestPoint?.id || null;
-          buildingId = nearestPoint?.building_id || null;
-        }
-      } catch (locationError) {
-        console.warn('[ReportScreen] Report submitted without live location:', locationError);
-      }
-
-      await SupabaseService.submitReport({
-        user_id: null,
+      const coordinates = await requestCoordinates(Location);
+      const saved = await RequestService.submit('report', {
+        ...coordinates,
         report_type: reportType,
         title: language === 'ar' ? `بلاغ عائق: ${reportType}` : `Obstacle report: ${reportType}`,
-        description: description || (language === 'ar' ? 'بلاغ مرسل من الجوال بدون تفاصيل إضافية' : 'Report sent from mobile without additional details'),
-        latitude,
-        longitude,
-        navigation_point_id: navigationPointId,
-        building_id: buildingId,
+        description: description.trim() || (language === 'ar' ? 'بلاغ بدون تفاصيل إضافية' : 'Report without additional details'),
       });
-
-      VoiceService.speak(
-        language === 'ar'
-          ? 'تم إرسال البلاغ بنجاح. شكراً لمساعدتك في تحسين سلامة المسارات.'
-          : 'Report submitted successfully. Thank you for helping improve route safety.'
-      );
-      router.replace('/home');
-    } catch (error) {
-      console.error(error);
-      VoiceService.speak(language === 'ar' ? 'تعذر إرسال البلاغ.' : 'Could not submit report.');
-    } finally {
-      setLoading(false);
-    }
+      if (mounted.current) {
+        setReceipt(saved);
+        HapticsService.trigger('arrived');
+        VoiceService.speak(language === 'ar' ? 'تم تأكيد حفظ البلاغ. يمكنك الاحتفاظ برقمه للمتابعة.' : 'Report saved. Keep its reference for follow-up.');
+      }
+    } catch (cause) {
+      const message = requestErrorMessage(cause, language);
+      if (mounted.current) { setError(message); VoiceService.speak(message); }
+    } finally { locked.current = false; if (mounted.current) setLoading(false); }
   };
+
+  const startNewReport = async () => {
+    if (locked.current || loading) return;
+    locked.current = true; setLoading(true); setError('');
+    try {
+      await RequestService.newRequest('report');
+      if (mounted.current) { setReceipt(null); setDescription(''); }
+    } catch (cause) { if (mounted.current) setError(requestErrorMessage(cause, language)); }
+    finally { locked.current = false; if (mounted.current) setLoading(false); }
+  };
+
+  const refreshReceipt = async () => {
+    if (locked.current || loading) return;
+    locked.current = true; setLoading(true); setError('');
+    try {
+      const saved = await RequestService.resume('report');
+      if (!saved) throw new Error(language === 'ar' ? 'تعذر العثور على إيصال البلاغ.' : 'Report receipt could not be found.');
+      if (mounted.current) setReceipt(saved);
+    } catch (cause) {
+      if (mounted.current) setError(requestErrorMessage(cause, language));
+    } finally { locked.current = false; if (mounted.current) setLoading(false); }
+  };
+
+  if (receipt) return (
+    <ScreenShell highContrast={isHighContrast}>
+      <HeroPanel theme={theme} code="RPT" eyebrow={language === 'ar' ? 'إيصال البلاغ' : 'Report receipt'}
+        title={language === 'ar' ? 'تم تأكيد حفظ البلاغ' : 'Report saved'}
+        subtitle={language === 'ar' ? 'حفظ البلاغ لا يعني إزالة العائق. تجنب المرور بالمكان غير الآمن حتى تتأكد إتاحته.' : 'A saved report does not mean the obstacle is removed. Avoid an unsafe path until its availability is confirmed.'} />
+      <Text selectable style={{ color: theme.text, marginBottom: 16 }}>{language === 'ar' ? 'رقم البلاغ' : 'Report ID'}: {receipt.id}</Text>
+      <Text accessibilityLiveRegion="polite" style={{ color: theme.text, marginBottom: 16 }}>
+        {language === 'ar' ? 'آخر حالة مؤكدة' : 'Last confirmed status'}: {reportStatusLabels[receipt.status]?.[language === 'ar' ? 'ar' : 'en'] || (language === 'ar' ? 'غير معروفة' : 'Unknown')}
+      </Text>
+      <Text style={{ color: theme.textMuted, marginBottom: 16 }}>{receipt.location_available
+        ? (language === 'ar' ? 'أُرفقت إحداثيات الموقع وقت الإرسال.' : 'Coordinates were attached at submission.')
+        : (language === 'ar' ? 'لم تتوفر إحداثيات؛ يعتمد تحديد المكان على وصفك.' : 'Coordinates unavailable; your description identifies the location.')}</Text>
+      {error ? <Text accessibilityRole="alert" style={{ color: theme.danger }}>{error}</Text> : null}
+      <PrimaryButton theme={theme} title={language === 'ar' ? 'تحديث حالة البلاغ' : 'Refresh report status'} accessibilityLabel={language === 'ar' ? 'تحديث حالة البلاغ' : 'Refresh report status'} onPress={refreshReceipt} disabled={loading} variant="secondary" />
+      <PrimaryButton theme={theme} title={language === 'ar' ? 'بلاغ آخر' : 'Another report'} accessibilityLabel={language === 'ar' ? 'إنشاء بلاغ آخر' : 'Create another report'} onPress={startNewReport} disabled={loading} />
+      <PrimaryButton theme={theme} title={language === 'ar' ? 'الرجوع للرئيسية' : 'Return home'} accessibilityLabel={language === 'ar' ? 'الرجوع للرئيسية' : 'Return home'} onPress={() => router.replace('/home')} variant="secondary" />
+    </ScreenShell>
+  );
 
   return (
     <ScreenShell highContrast={isHighContrast}>
@@ -138,6 +172,7 @@ export default function ReportScreen() {
         code="RPT"
       />
 
+      {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={{ color: theme.danger, marginBottom: 16 }}>{error}</Text> : null}
       <Text style={[styles.sectionTitle, { color: theme.text }]}>
         {language === 'ar' ? 'نوع المشكلة' : 'Issue type'}
       </Text>
@@ -150,6 +185,7 @@ export default function ReportScreen() {
           label={item.code}
           theme={theme}
           selected={reportType === item.key}
+          disabled={loading}
           compact
           onPress={() => handleSelectType(item.key, item.ar, item.en)}
           accessibilityLabel={language === 'ar' ? item.ar : item.en}
@@ -169,6 +205,8 @@ export default function ReportScreen() {
           },
         ]}
         multiline={true}
+        maxLength={4000}
+        editable={!loading}
         numberOfLines={4}
         placeholder={language === 'ar' ? 'مثال: العائق أمام قاعة 101 في الجهة اليمنى...' : 'Example: obstacle in front of room 101 on the right side...'}
         placeholderTextColor={theme.textSoft}

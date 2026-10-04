@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baseera-admin-pwa-v1';
+const CACHE_NAME = 'baseera-admin-pwa-v2-safety';
 const APP_SHELL = [
   '/',
   '/offline.html',

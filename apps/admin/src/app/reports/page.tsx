@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { saveRequestStatus } from '@/lib/request-status';
 import { supabase } from '@/lib/supabase';
 import { Building, NavigationPoint, Report, ReportStatus, ReportType } from '@baser/types';
 
@@ -27,18 +28,23 @@ export default function ReportsPage() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | ReportStatus>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const writing = useRef(false);
 
   const pointsById = useMemo(() => Object.fromEntries(points.map(point => [point.id, point])), [points]);
   const buildingsById = useMemo(() => Object.fromEntries(buildings.map(building => [building.id, building])), [buildings]);
 
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: reportsData }, { data: pointsData }, { data: buildingsData }] = await Promise.all([
+    const [{ data: reportsData, error: loadError }, { data: pointsData }, { data: buildingsData }] = await Promise.all([
       supabase.from('reports').select('*').order('created_at', { ascending: false }),
       supabase.from('navigation_points').select('*'),
       supabase.from('buildings').select('*'),
     ]);
 
+    if (loadError) { setError('تعذر تحميل البلاغات. تحقق من الاتصال والصلاحيات.'); setLoading(false); return; }
+    setError('');
     setReports((reportsData || []) as Report[]);
     setPoints((pointsData || []) as NavigationPoint[]);
     setBuildings((buildingsData || []) as Building[]);
@@ -50,10 +56,15 @@ export default function ReportsPage() {
   }, []);
 
   const updateStatus = async (id: string, status: ReportStatus) => {
-    const { error } = await supabase.from('reports').update({ status }).eq('id', id);
-    if (!error) {
-      setReports(reports.map(report => report.id === id ? { ...report, status } : report));
-    }
+    const previous = reports.find(report => report.id === id);
+    if (writing.current || !previous) return;
+    writing.current = true;
+    setSaving(true); setError('');
+    try {
+      const saved = await saveRequestStatus(supabase, 'reports', id, previous.status, status);
+      setReports(items => items.map(report => report.id === id ? saved as Report : report));
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'تعذر تأكيد التحديث.'); }
+    finally { writing.current = false; setSaving(false); }
   };
 
   const filteredReports = reports.filter(report => activeFilter === 'all' || report.status === activeFilter);
@@ -65,12 +76,13 @@ export default function ReportsPage() {
     if (point?.name_ar && building?.name_ar) return `${point.name_ar} - ${building.name_ar}`;
     if (point?.name_ar) return point.name_ar;
     if (building?.name_ar) return building.name_ar;
-    if (report.latitude && report.longitude) return `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`;
+    if (report.latitude != null && report.longitude != null) return `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`;
     return 'غير محدد';
   };
 
   return (
     <div className="space-y-6">
+      {error ? <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{error}</p> : null}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-2xl font-bold text-slate-800">بلاغات العوائق والمخاطر</h3>
@@ -135,6 +147,7 @@ export default function ReportsPage() {
               <div className="flex flex-row md:flex-col gap-2 shrink-0 justify-end">
                 {report.status === 'new' && (
                   <button
+                    disabled={saving}
                     onClick={() => updateStatus(report.id, 'investigating')}
                     className="bg-amber-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs hover:bg-amber-600 transition-colors"
                   >
@@ -143,6 +156,7 @@ export default function ReportsPage() {
                 )}
                 {report.status !== 'resolved' && (
                   <button
+                    disabled={saving}
                     onClick={() => updateStatus(report.id, 'resolved')}
                     className="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-emerald-700 transition-colors"
                   >
@@ -151,6 +165,7 @@ export default function ReportsPage() {
                 )}
                 {report.status !== 'rejected' && (
                   <button
+                    disabled={saving}
                     onClick={() => updateStatus(report.id, 'rejected')}
                     className="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-200 transition-colors"
                   >

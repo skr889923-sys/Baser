@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { NavigationPoint, QRCode as BaserQRCode } from '@baser/types';
+import { NavigationPoint } from '@baser/types';
 import { QrCode, Plus, RefreshCw, Trash2, Printer } from 'lucide-react';
 
 export default function QRsPage() {
@@ -10,12 +10,15 @@ export default function QRsPage() {
   const [points, setPoints] = useState<NavigationPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Form State
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     navigation_point_id: '',
-    code_content: ''
+    code_content: '',
+    location_description_ar: '',
+    location_description_en: ''
   });
 
   const fetchData = async () => {
@@ -43,21 +46,35 @@ export default function QRsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.navigation_point_id || !formData.code_content) {
-      alert('يرجى تعبئة جميع الحقول');
+    if (saving) return;
+    const payload = {
+      navigation_point_id: formData.navigation_point_id,
+      code_content: formData.code_content.trim(),
+      location_description_ar: formData.location_description_ar.trim(),
+      location_description_en: formData.location_description_en.trim(),
+    };
+    if (Object.values(payload).some(value => !value)) {
+      setSaveError('اختر النقطة واكتب محتوى الرمز ووصف الموقع بالعربية والإنجليزية.');
       return;
     }
+    setSaveError(null);
     setSaving(true);
-    const { data, error } = await supabase.from('qr_codes').insert([formData]).select('*, point:navigation_points(name_ar)').single();
-    if (!error && data) {
-      setQrs([data, ...qrs]);
+    try {
+      const { data, error } = await supabase.from('qr_codes').insert([payload]).select('*, point:navigation_points(name_ar)').single();
+      if (error || !data) {
+        setSaveError(error?.code === '23505'
+          ? 'هذا الرمز مستخدم بالفعل. اختر محتوى مختلفًا.'
+          : 'تعذر تأكيد حفظ الرمز. احتُفظ بالبيانات؛ أعد المحاولة أو راجع صلاحيات الحساب وتهيئة قاعدة البيانات.');
+        return;
+      }
+      setQrs(current => [data, ...current]);
       setShowForm(false);
-      setFormData({ navigation_point_id: '', code_content: '' });
-    } else {
-      alert('حدث خطأ أثناء الحفظ (قد يكون الكود مكرراً)');
-      console.error(error);
+      setFormData({ navigation_point_id: '', code_content: '', location_description_ar: '', location_description_en: '' });
+    } catch {
+      setSaveError('تعذر الاتصال لتأكيد الحفظ. احتُفظ بالبيانات؛ حدّث قائمة الرموز قبل إعادة المحاولة.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -112,6 +129,8 @@ export default function QRsPage() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
           <h2 className="text-xl font-bold mb-6">ربط النقطة الملاحية برمز QR</h2>
           <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {saveError && <p role="alert" className="md:col-span-2 text-red-700 bg-red-50 p-3 rounded-lg">{saveError}</p>}
+            <fieldset disabled={saving} className="contents">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">النقطة الملاحية *</label>
               <select required value={formData.navigation_point_id} onChange={e => setFormData({...formData, navigation_point_id: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500">
@@ -128,12 +147,22 @@ export default function QRsPage() {
               <input required value={formData.code_content} onChange={e => setFormData({...formData, code_content: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-left" dir="ltr" placeholder="BASER-XXXX" />
             </div>
 
+            <div>
+              <label htmlFor="qr-location-ar" className="block text-sm font-medium text-slate-700 mb-1">وصف الموقع بالعربية *</label>
+              <textarea id="qr-location-ar" required rows={3} value={formData.location_description_ar} onChange={e => setFormData({...formData, location_description_ar: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500" placeholder="صف مكان الرمز بدقة لتسهيل العثور عليه" />
+            </div>
+            <div>
+              <label htmlFor="qr-location-en" className="block text-sm font-medium text-slate-700 mb-1">وصف الموقع بالإنجليزية *</label>
+              <textarea id="qr-location-en" required rows={3} dir="ltr" value={formData.location_description_en} onChange={e => setFormData({...formData, location_description_en: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Describe the QR location precisely" />
+            </div>
+
             <div className="md:col-span-2 flex justify-end gap-3 mt-4 border-t pt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium">إلغاء</button>
               <button type="submit" disabled={saving} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50">
                 {saving ? 'جاري الحفظ...' : 'توليد وحفظ الكود'}
               </button>
             </div>
+            </fieldset>
           </form>
         </div>
       )}
@@ -148,12 +177,12 @@ export default function QRsPage() {
             <div key={qr.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
               <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-center items-center h-48">
                 {/* Using a free QR generation API for visual display in the admin panel */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qr.code_content)}`} alt="QR" className="w-32 h-32" />
               </div>
               <div className="p-4 flex-1 flex flex-col">
                 <h3 className="font-bold text-slate-800 mb-1">{qr.point?.name_ar || 'نقطة محذوفة'}</h3>
                 <p className="text-xs text-slate-500 font-mono truncate" dir="ltr">{qr.code_content}</p>
+                {qr.location_description_ar && <p className="text-sm text-slate-600 mt-2">{qr.location_description_ar}</p>}
                 
                 <div className="mt-auto pt-4 flex gap-2">
                   <button onClick={() => handlePrint(qr.code_content)} className="flex-1 bg-slate-100 text-slate-700 hover:bg-slate-200 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors">

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, Mic, PlayCircle, RefreshCw, Search, Square, UserPlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { createRecordingDraft, saveVoiceRecording, type RecordingDraft } from '@/lib/voice-recording';
 import {
   Building,
   NavigationPoint,
@@ -90,12 +91,11 @@ const CORE_GROUPS: PhraseGroup[] = [
     title: 'مسح QR والتموضع الداخلي',
     description: 'رسائل الكاميرا، نجاح أو فشل المسح، ونقطة البداية من الملصق.',
     items: [
-      { key: 'qr.intro', title: 'مقدمة مسح QR', text: 'شاشة مسح الرموز. وجه الكاميرا نحو ملصق كيو أر الإرشادي، أو اضغط زر المحاكاة.', source: 'مسح QR', priority: 'critical' },
+      { key: 'qr.intro', title: 'مقدمة مسح QR', text: 'شاشة مسح الرموز. وجه الكاميرا نحو ملصق بصيره لتحديد موقعك داخل المبنى.', source: 'مسح QR', priority: 'critical' },
       { key: 'qr.camera_permission_required', title: 'صلاحية الكاميرا مطلوبة', text: 'صلاحية الكاميرا مطلوبة لعملية المسح', source: 'مسح QR', priority: 'critical' },
       { key: 'qr.unknown_code', title: 'رمز غير معروف', text: 'هذا الرمز غير معروف', source: 'مسح QR', priority: 'critical' },
       { key: 'qr.scan_error', title: 'خطأ في المسح', text: 'حدث خطأ أثناء المسح.', source: 'مسح QR', priority: 'critical' },
       { key: 'qr.success_template', title: 'نجاح التعرف على الموقع', text: 'تم التعرف على الموقع بنجاح. أنت الآن عند اسم النقطة. سيتم قراءة تعليمات النقطة.', source: 'نتيجة QR', priority: 'critical' },
-      { key: 'qr.simulation_success_template', title: 'نجاح المحاكاة', text: 'تم مسح الرمز بنجاح. أنت الآن عند اسم النقطة. اختر أحد الخيارات المتاحة للمتابعة.', source: 'محاكاة QR', priority: 'standard' },
       { key: 'qr.ready_again', title: 'جاهز للمسح مجددًا', text: 'جاهز للمسح مجددًا.', source: 'إعادة المسح', priority: 'standard' },
       { key: 'qr.route_from_here', title: 'ابدأ من هذه النقطة', text: 'ابدأ توجيهًا ملاحيًا من هذه النقطة', source: 'نتيجة QR', priority: 'critical' },
       { key: 'qr.choose_destination', title: 'اختيار وجهة جديدة', text: 'اختر وجهة جديدة', source: 'نتيجة QR', priority: 'standard' },
@@ -210,50 +210,68 @@ export default function VoicesPage() {
   const [recordingFilter, setRecordingFilter] = useState<RecordingFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [recordingsLoading, setRecordingsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [characterSaving, setCharacterSaving] = useState(false);
 
   const [newCharName, setNewCharName] = useState('');
   const [newCharGender, setNewCharGender] = useState<VoiceCharacter['gender']>('female');
 
   const [isRecording, setIsRecording] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [starting, setStarting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState<RecordingDraft | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordingLock = useRef(false);
+  const uploadLock = useRef(false);
+  const characterLock = useRef(false);
+  const mounted = useRef(true);
+  const recordingsRequest = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingBusy = Boolean(isRecording || starting || uploading || pending);
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
+    try {
+      const results = await Promise.all([
+        supabase.from('voice_characters').select('*').order('created_at', { ascending: true }),
+        supabase.from('buildings').select('*').order('name_ar', { ascending: true }),
+        supabase.from('navigation_points').select('*').order('name_ar', { ascending: true }),
+        supabase.from('routes').select('*').order('name_ar', { ascending: true }),
+        supabase.from('route_steps').select('*').order('step_order', { ascending: true }),
+      ]);
+      if (results.some(result => result.error)) throw new Error('تعذر تحميل كتالوج الأصوات كاملًا. أعد تحديث القائمة.');
+      const [{ data: chars }, { data: bldgs }, { data: pts }, { data: rts }, { data: routeSteps }] = results;
+      const loadedCharacters = (chars || []) as VoiceCharacter[];
+      setCharacters(loadedCharacters);
+      setBuildings((bldgs || []) as Building[]);
+      setPoints((pts || []) as NavigationPoint[]);
+      setRoutes((rts || []) as Route[]);
+      setSteps((routeSteps || []) as RouteStep[]);
 
-    const [
-      { data: chars },
-      { data: bldgs },
-      { data: pts },
-      { data: rts },
-      { data: routeSteps },
-    ] = await Promise.all([
-      supabase.from('voice_characters').select('*').order('created_at', { ascending: true }),
-      supabase.from('buildings').select('*').order('name_ar', { ascending: true }),
-      supabase.from('navigation_points').select('*').order('name_ar', { ascending: true }),
-      supabase.from('routes').select('*').order('name_ar', { ascending: true }),
-      supabase.from('route_steps').select('*').order('step_order', { ascending: true }),
-    ]);
-
-    const loadedCharacters = (chars || []) as VoiceCharacter[];
-    setCharacters(loadedCharacters);
-    setBuildings((bldgs || []) as Building[]);
-    setPoints((pts || []) as NavigationPoint[]);
-    setRoutes((rts || []) as Route[]);
-    setSteps((routeSteps || []) as RouteStep[]);
-
-    if (loadedCharacters.length > 0 && !activeCharId) {
-      setActiveCharId(loadedCharacters[0].id);
-    }
-
-    setLoading(false);
+      setActiveCharId(current => current && loadedCharacters.some(character => character.id === current)
+        ? current : loadedCharacters[0]?.id || null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'تعذر الاتصال لتحميل الكتالوج.');
+    } finally { setLoading(false); }
   };
 
   const fetchRecordings = async (charId: string) => {
-    const { data } = await supabase.from('voice_recordings').select('*').eq('character_id', charId);
-    setRecordings((data || []) as VoiceRecording[]);
+    const request = ++recordingsRequest.current;
+    setRecordingsLoading(true); setRecordings([]);
+    try {
+      const { data, error: readError } = await supabase.from('voice_recordings').select('*').eq('character_id', charId);
+      if (readError) throw new Error('تعذر تحميل تسجيلات الشخصية. حدّث القائمة قبل التسجيل.');
+      if (mounted.current && request === recordingsRequest.current) setRecordings((data || []) as VoiceRecording[]);
+    } catch (cause) {
+      if (mounted.current && request === recordingsRequest.current) setError(cause instanceof Error ? cause.message : 'تعذر تحميل التسجيلات.');
+    } finally {
+      if (mounted.current && request === recordingsRequest.current) setRecordingsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -264,16 +282,24 @@ export default function VoicesPage() {
     if (activeCharId) {
       fetchRecordings(activeCharId);
     } else {
+      recordingsRequest.current++;
       setRecordings([]);
+      setRecordingsLoading(false);
     }
   }, [activeCharId]);
 
   useEffect(() => {
+    mounted.current = true;
     return () => {
+      mounted.current = false;
+      recordingsRequest.current++;
       if (timerRef.current) clearInterval(timerRef.current);
-      if (mediaRecorderRef.current?.state === 'recording') {
-        mediaRecorderRef.current.stop();
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.onstop = null; recorder.ondataavailable = null; recorder.onerror = null;
+        if (recorder.state !== 'inactive') recorder.stop();
       }
+      streamRef.current?.getTracks().forEach(track => track.stop());
     };
   }, []);
 
@@ -334,22 +360,25 @@ export default function VoicesPage() {
         id: 'routes_dynamic',
         title: 'المسارات المحفوظة',
         description: 'أسماء المسارات وملخصات الرحلات المسجلة من لوحة التحكم.',
-        items: routes.flatMap(route => [
+        items: routes.flatMap(route => {
+          const name = route.name_ar || route.name_en || 'مسار دون اسم';
+          return [
           {
             key: `route.${route.id}.name`,
-            title: `اسم المسار: ${route.name_ar}`,
-            text: route.name_ar,
+            title: `اسم المسار: ${name}`,
+            text: name,
             source: 'المسارات',
             priority: 'standard' as const,
           },
           {
             key: `route.${route.id}.summary`,
-            title: `ملخص المسار: ${route.name_ar}`,
-            text: `تم اختيار مسار: ${route.name_ar}. المسافة الكلية ${route.distance_meters} مترًا. الزمن المتوقع للوصول ${route.estimated_minutes} دقيقة.`,
+            title: `ملخص المسار: ${name}`,
+            text: `تم اختيار مسار: ${name}. المسافة الكلية ${route.distance_meters} مترًا. الزمن المتوقع للوصول ${route.estimated_minutes} دقيقة.`,
             source: 'المسارات',
             priority: 'standard' as const,
           },
-        ]),
+          ];
+        }),
       },
       {
         id: 'route_steps',
@@ -406,99 +435,100 @@ export default function VoicesPage() {
 
   const handleAddCharacter = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!newCharName.trim()) return;
+    if (!newCharName.trim() || characterLock.current || recordingLock.current) return;
+    characterLock.current = true; setCharacterSaving(true); setError(null); setMessage(null);
+    try {
+      const { data, error: saveError } = await supabase.from('voice_characters').insert({
+        name: newCharName.trim(), gender: newCharGender,
+      }).select('*').maybeSingle();
+      if (saveError || !data?.id) throw new Error('تعذر تأكيد إنشاء الشخصية. احتُفظ بالاسم؛ حدّث القائمة قبل إعادة المحاولة.');
+      setCharacters(current => [...current, data as VoiceCharacter]);
+      setActiveCharId(data.id); setNewCharName(''); setMessage('تم حفظ الشخصية الصوتية.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'تعذر تأكيد حفظ الشخصية.');
+    } finally { characterLock.current = false; setCharacterSaving(false); }
+  };
 
-    const { data, error } = await supabase.from('voice_characters').insert([{
-      name: newCharName.trim(),
-      gender: newCharGender,
-    }]).select();
-
-    if (error) {
-      console.error(error);
-      alert('تعذر إنشاء الشخصية الصوتية.');
-      return;
-    }
-
-    if (data?.[0]) {
-      const createdCharacter = data[0] as VoiceCharacter;
-      setCharacters([...characters, createdCharacter]);
-      setActiveCharId(createdCharacter.id);
-      setNewCharName('');
+  const uploadRecording = async (draft: RecordingDraft) => {
+    if (uploadLock.current) return;
+    uploadLock.current = true; setUploading(true); setError(null); setMessage(null);
+    try {
+      const row = await saveVoiceRecording(supabase, draft);
+      if (!mounted.current) return;
+      setRecordings(current => [...current.filter(item => item.phrase_key !== row.phrase_key), row]);
+      setPending(null); recordingLock.current = false;
+      setMessage('تم تأكيد حفظ التسجيل. يمكنك تشغيله للتحقق من الصوت.');
+    } catch (cause) {
+      if (mounted.current) setError(cause instanceof Error ? cause.message : 'تعذر تأكيد الحفظ. المقطع متاح لإعادة المحاولة أو التنزيل.');
+    } finally {
+      uploadLock.current = false;
+      if (mounted.current) setUploading(false);
     }
   };
 
   const startRecording = async (phraseKey: string) => {
+    if (!activeCharId || recordingLock.current || loading || recordingsLoading || characterLock.current) return;
+    const characterId = activeCharId;
+    recordingLock.current = true; setStarting(true); setIsRecording(phraseKey); setError(null); setMessage(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
+      if (!mounted.current) { stream.getTracks().forEach(track => track.stop()); return; }
+      streamRef.current = stream;
+      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus']
+        .find(mime => MediaRecorder.isTypeSupported(mime));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
+      const chunks: Blob[] = [];
+      let failed = false;
+      recorder.ondataavailable = event => { if (event.data.size > 0) chunks.push(event.data); };
+      recorder.onerror = () => { failed = true; stream.getTracks().forEach(track => track.stop()); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop()); streamRef.current = null;
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (!mounted.current) return;
+        setIsRecording(null); setStarting(false);
+        try {
+          if (failed) throw new Error('تعذر إكمال التسجيل. تحقق من الميكروفون وسجّل مجددًا.');
+          const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || '' });
+          const draft = createRecordingDraft(characterId, phraseKey, blob);
+          setPending(draft);
+          void uploadRecording(draft);
+        } catch (cause) {
+          recordingLock.current = false;
+          setError(cause instanceof Error ? cause.message : 'تعذر تجهيز المقطع للحفظ.');
         }
       };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await uploadRecording(phraseKey, audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(phraseKey);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      alert('تعذر الوصول للمايكروفون. يرجى التأكد من إعطاء الصلاحيات للمتصفح.');
+      recorder.start(); setStarting(false); setRecordingTime(0);
+      timerRef.current = setInterval(() => setRecordingTime(previous => previous + 1), 1000);
+    } catch {
+      streamRef.current?.getTracks().forEach(track => track.stop()); streamRef.current = null;
+      recordingLock.current = false;
+      if (mounted.current) {
+        setStarting(false); setIsRecording(null);
+        setError('تعذر الوصول للميكروفون. تحقق من الإذن واستخدم متصفحًا يدعم التسجيل.');
+      }
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(null);
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === 'recording') {
+      recorder.stop();
+      streamRef.current?.getTracks().forEach(track => track.stop());
       if (timerRef.current) clearInterval(timerRef.current);
     }
   };
-
-  const uploadRecording = async (phraseKey: string, audioBlob: Blob) => {
-    if (!activeCharId) return;
-
-    const safeKey = phraseKey.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const fileName = `${activeCharId}/${safeKey}-${Date.now()}.webm`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('voiceovers')
-      .upload(fileName, audioBlob, { contentType: 'audio/webm' });
-
-    if (uploadError) {
-      console.error('Upload Error:', uploadError);
-      alert('حدث خطأ أثناء رفع التسجيل.');
-      return;
-    }
-
-    const { data: publicUrlData } = supabase.storage.from('voiceovers').getPublicUrl(fileName);
-    const audioUrl = publicUrlData.publicUrl;
-
-    const { error: dbError } = await supabase.from('voice_recordings').upsert({
-      character_id: activeCharId,
-      phrase_key: phraseKey,
-      audio_url: audioUrl,
-      updated_at: new Date().toISOString(),
-    }, {
-      onConflict: 'character_id,phrase_key',
-    });
-
-    if (dbError) {
-      console.error('Recording DB Error:', dbError);
-      alert('تم رفع الملف، لكن تعذر حفظ رابط التسجيل في قاعدة البيانات.');
-      return;
-    }
-
-    await fetchRecordings(activeCharId);
+  const downloadPending = () => {
+    if (!pending) return;
+    const url = URL.createObjectURL(pending.blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = pending.path.split('/').pop() || 'recording';
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  const discardPending = () => {
+    if (uploadLock.current) return;
+    setPending(null); recordingLock.current = false; setError(null);
+    if (activeCharId) void fetchRecordings(activeCharId);
   };
 
   const formatTime = (seconds: number) => {
@@ -553,17 +583,18 @@ export default function VoicesPage() {
             {isThisRecording ? (
               <button
                 onClick={stopRecording}
+                disabled={starting}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 animate-pulse"
               >
                 <Square className="w-4 h-4" />
-                إيقاف التسجيل ({formatTime(recordingTime)})
+                {starting ? 'جارٍ طلب إذن الميكروفون…' : `إيقاف التسجيل (${formatTime(recordingTime)})`}
               </button>
             ) : (
               <button
                 onClick={() => startRecording(item.key)}
-                disabled={!activeCharId || !!isRecording}
+                disabled={!activeCharId || recordingBusy || loading || recordingsLoading || characterSaving}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold transition-all ${
-                  isRecording || !activeCharId
+                  recordingBusy || !activeCharId || loading || recordingsLoading || characterSaving
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                     : recording
                       ? 'bg-slate-900 text-white hover:bg-slate-800'
@@ -588,13 +619,27 @@ export default function VoicesPage() {
           <p className="text-slate-500 mt-2">كتالوج شامل لتسجيل الصوت البشري لكل رسائل التطبيق، مع أسماء المباني والنقاط والمسارات وخطوات الملاحة.</p>
         </div>
         <button
-          onClick={fetchData}
+          onClick={() => { void fetchData(); if (activeCharId) void fetchRecordings(activeCharId); }}
+          disabled={recordingBusy || characterSaving || loading || recordingsLoading}
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           تحديث القائمة
         </button>
       </div>
+
+      {error && <p role="alert" className="border border-red-200 bg-red-50 text-red-800 rounded-xl p-4">{error}</p>}
+      {message && <p role="status" className="bg-emerald-50 text-emerald-800 rounded-xl p-4">{message}</p>}
+      {pending && <div className="border border-sky-200 bg-sky-50 rounded-xl p-4 space-y-3">
+        <p role="status">{uploading ? 'جارٍ رفع المقطع وتأكيد حفظه…' : 'المقطع محفوظ مؤقتًا في هذه الصفحة. نزّله للاحتفاظ به قبل إغلاقها.'}</p>
+        <p className="text-sm text-slate-600">الشخصية: {characters.find(character => character.id === pending.characterId)?.name} · العبارة: {allItems.find(item => item.key === pending.phraseKey)?.title || pending.phraseKey}</p>
+        <div className="flex flex-wrap gap-3">
+          <button disabled={uploading} onClick={() => void uploadRecording(pending)} className="px-4 py-2 rounded-lg bg-sky-700 text-white disabled:opacity-50">إعادة محاولة الحفظ</button>
+          <button onClick={downloadPending} className="px-4 py-2 rounded-lg border border-sky-300">تنزيل المقطع</button>
+          <button disabled={uploading} onClick={discardPending} className="px-4 py-2 rounded-lg border border-slate-300 disabled:opacity-50">تجاهل المقطع المؤقت</button>
+        </div>
+      </div>}
+      {recordingsLoading && <p role="status" className="text-slate-500">جارٍ تحميل تسجيلات الشخصية…</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
@@ -629,6 +674,7 @@ export default function VoicesPage() {
               {characters.map(character => (
                 <button
                   key={character.id}
+                  disabled={recordingBusy || characterSaving}
                   onClick={() => setActiveCharId(character.id)}
                   className={`w-full text-right px-4 py-3 rounded-xl font-bold transition-all ${
                     activeCharId === character.id
@@ -646,9 +692,11 @@ export default function VoicesPage() {
             </div>
 
             <form onSubmit={handleAddCharacter} className="pt-6 border-t border-slate-100 space-y-3">
+              <fieldset disabled={recordingBusy || characterSaving} className="space-y-3">
               <h4 className="text-sm font-bold text-slate-700">إضافة شخصية جديدة</h4>
               <input
                 type="text"
+                aria-label="اسم الشخصية الصوتية"
                 placeholder="مثال: صوت سارة"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
                 value={newCharName}
@@ -656,6 +704,7 @@ export default function VoicesPage() {
                 required
               />
               <select
+                aria-label="نوع صوت الشخصية"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
                 value={newCharGender}
                 onChange={event => setNewCharGender(event.target.value as VoiceCharacter['gender'])}
@@ -665,8 +714,9 @@ export default function VoicesPage() {
               </select>
               <button type="submit" className="w-full bg-sky-600 text-white font-bold py-2.5 rounded-lg text-sm hover:bg-sky-700 flex items-center justify-center gap-2">
                 <UserPlus className="w-4 h-4" />
-                إضافة
+                {characterSaving ? 'جارٍ الحفظ…' : 'إضافة'}
               </button>
+              </fieldset>
             </form>
           </div>
 
@@ -678,6 +728,7 @@ export default function VoicesPage() {
                 return (
                   <button
                     key={group.id}
+                    disabled={Boolean(isRecording)}
                     onClick={() => setActiveGroupId(group.id)}
                     className={`w-full text-right px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                       activeGroupId === group.id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
@@ -694,7 +745,7 @@ export default function VoicesPage() {
           </div>
         </aside>
 
-        <main className="lg:col-span-3 space-y-5">
+        <section aria-label="عبارات التعليق الصوتي" className="lg:col-span-3 space-y-5">
           {!activeCharId ? (
             <div className="bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-12 text-center">
               <Mic className="w-10 h-10 text-slate-400 mx-auto" />
@@ -713,6 +764,7 @@ export default function VoicesPage() {
                     <Search className="w-4 h-4 absolute right-3 top-3.5 text-slate-400" />
                     <input
                       value={searchTerm}
+                      disabled={Boolean(isRecording)}
                       onChange={event => setSearchTerm(event.target.value)}
                       placeholder="ابحث في عنوان العبارة أو النص أو المصدر..."
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pr-10 pl-4 text-sm focus:outline-none focus:border-sky-500"
@@ -727,6 +779,7 @@ export default function VoicesPage() {
                     ].map(filter => (
                       <button
                         key={filter.key}
+                        disabled={Boolean(isRecording)}
                         onClick={() => setRecordingFilter(filter.key as RecordingFilter)}
                         className={`px-3 py-2 rounded-xl text-sm font-bold ${
                           recordingFilter === filter.key ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -752,7 +805,7 @@ export default function VoicesPage() {
               )}
             </>
           )}
-        </main>
+        </section>
       </div>
     </div>
   );

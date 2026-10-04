@@ -1,169 +1,160 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import type { RequestReceipt } from '@baser/types';
+import * as Location from 'expo-location';
 import { useNavigationStore } from '../src/store/useNavigationStore';
-import SupabaseService from '../src/services/SupabaseService';
+import RequestService from '../src/services/RequestService';
+import { requestErrorMessage } from '../src/services/request-client';
+import { requestCoordinates } from '../src/services/request-location';
 import VoiceService from '../src/services/VoiceService';
 import HapticsService from '../src/services/HapticsService';
-import NavigationService from '../src/services/NavigationService';
-import * as Location from 'expo-location';
-import {
-  getInterfaceTheme,
-  HeroPanel,
-  PrimaryButton,
-  ScreenShell,
-  SignalGlyph,
-  StatusPill,
-  surfaceStyle,
-} from '../src/components/BlindInterface';
+import { getInterfaceTheme, HeroPanel, PrimaryButton, ScreenShell, StatusPill, surfaceStyle } from '../src/components/BlindInterface';
 
 export default function EmergencyScreen() {
   const router = useRouter();
   const { language, isHighContrast } = useNavigationStore();
+  const ar = language === 'ar';
   const theme = getInterfaceTheme(isHighContrast);
-
-  const [confirmed, setConfirmed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [receipt, setReceipt] = useState<RequestReceipt | null>(null);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState('');
+  const [description, setDescription] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const locked = useRef(false);
+  const mounted = useRef(true);
+  const terminal = receipt?.status === 'resolved' || receipt?.status === 'cancelled';
+  const statusText = receipt ? ({
+    new: ar ? 'تم حفظ الطلب — بانتظار تأكيد استلام الأمن' : 'Request saved — awaiting staff acknowledgement',
+    contacted: ar ? 'أكد فريق الأمن استلام الطلب' : 'Staff acknowledged your request',
+    arrived: ar ? 'سجّل فريق الأمن وصوله' : 'Staff reported arrival',
+    resolved: ar ? 'أُغلق الطلب بعد المعالجة' : 'Request resolved',
+    cancelled: ar ? 'تم تأكيد إلغاء الطلب' : 'Cancellation confirmed',
+    investigating: '', rejected: '',
+  })[receipt.status] : '';
 
   useEffect(() => {
-    VoiceService.speak(
-      language === 'ar'
-        ? 'شاشة الطوارئ. اضغط زر تأكيد طلب المساعدة لإرسال موقعك للأمن الجامعي.'
-        : 'Emergency screen. Press confirm help request to send your location to campus security.'
-    );
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [language, intervalId]);
+  useEffect(() => {
+    let active = true;
+    RequestService.resume('emergency').then(saved => {
+      if (active) setReceipt(saved);
+    }).catch(cause => {
+      if (active) setError(requestErrorMessage(cause, language));
+    }).finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [language]);
 
-  const handleConfirmSOS = async () => {
-    if (confirmed) return;
+  useEffect(() => {
+    if (statusText) VoiceService.speak(statusText);
+  }, [statusText]);
 
-    setSubmitting(true);
-    HapticsService.trigger('emergency');
-
+  const refresh = async () => {
+    if (locked.current) return;
+    locked.current = true;
     try {
-      let latitude = 30.622971;
-      let longitude = 32.269073;
-      let nearestPointId: string | null = null;
-      let nearestBuildingId: string | null = null;
+      const saved = await RequestService.resume('emergency');
+      if (!saved) throw new Error('No receipt');
+      if (mounted.current) { setReceipt(saved); setError(''); }
+    } catch (cause) {
+      if (mounted.current) setError(requestErrorMessage(cause, language));
+    } finally { locked.current = false; }
+  };
 
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const currentLocation = await Location.getCurrentPositionAsync({});
-          latitude = currentLocation.coords.latitude;
-          longitude = currentLocation.coords.longitude;
+  useEffect(() => {
+    if (!receipt || terminal) return;
+    const poll = setInterval(refresh, 15000);
+    const pulse = setInterval(() => HapticsService.trigger('emergency'), 3000);
+    return () => { clearInterval(poll); clearInterval(pulse); };
+  }, [receipt?.id, terminal, language]);
 
-          const nearestPoint = await NavigationService.getNearestPoint(latitude, longitude);
-          nearestPointId = nearestPoint?.id || null;
-          nearestBuildingId = nearestPoint?.building_id || null;
-        }
-      } catch (locationError) {
-        console.warn('[EmergencyScreen] Falling back to default SOS coordinates:', locationError);
-      }
-
-      await SupabaseService.submitEmergency({
-        user_id: null,
-        latitude,
-        longitude,
-        nearest_point_id: nearestPointId,
-        nearest_building_id: nearestBuildingId,
-        message: language === 'ar' ? 'مستخدم كفيف يحتاج مساعدة عاجلة' : 'Blind user needs urgent assistance',
+  const submit = async () => {
+    if (locked.current || receipt || busy) return;
+    locked.current = true;
+    setBusy(true); setError('');
+    try {
+      const coordinates = await requestCoordinates(Location);
+      const saved = await RequestService.submit('emergency', {
+        ...coordinates,
+        message: `${ar ? 'طلب مساعدة عاجلة' : 'Urgent help request'}. ${description.trim() || (ar ? 'لا يوجد وصف إضافي للمكان.' : 'No additional location description.')}`,
       });
-
-      setConfirmed(true);
-      VoiceService.speak(
-        language === 'ar'
-          ? 'تم إرسال بلاغ الطوارئ للأمن الجامعي. يرجى البقاء في مكانك. سيتم تفعيل اهتزازات متكررة لمساعدة فريق الاستجابة.'
-          : 'Emergency request sent to campus security. Please stay where you are. Repeating vibrations are active for responders.'
-      );
-
-      const id = setInterval(() => {
-        HapticsService.trigger('emergency');
-      }, 3000);
-      setIntervalId(id);
-    } catch (error) {
-      console.error(error);
-      VoiceService.speak(language === 'ar' ? 'تعذر إرسال طلب الطوارئ.' : 'Could not send emergency request.');
+      if (mounted.current) { setReceipt(saved); HapticsService.trigger('emergency'); }
+    } catch (cause) {
+      const message = requestErrorMessage(cause, language);
+      if (mounted.current) { setError(message); VoiceService.speak(message); }
     } finally {
-      setSubmitting(false);
+      locked.current = false;
+      if (mounted.current) setBusy(false);
     }
   };
 
-  const handleCancelSOS = () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
+  const cancel = async () => {
+    if (locked.current || busy) return;
+    locked.current = true; setBusy(true); setError('');
+    try {
+      const saved = await RequestService.cancelEmergency();
+      if (mounted.current) { setReceipt(saved); setConfirmCancel(false); }
+    } catch (cause) {
+      const message = requestErrorMessage(cause, language);
+      if (mounted.current) { setError(message); VoiceService.speak(message); }
+    } finally {
+      locked.current = false;
+      if (mounted.current) setBusy(false);
     }
+  };
 
-    HapticsService.trigger('continue');
-    VoiceService.speak(language === 'ar' ? 'تم إلغاء طلب الطوارئ. الرجوع للرئيسية.' : 'Emergency request cancelled. Returning home.');
-    router.replace('/home');
+  const newRequest = async () => {
+    if (locked.current || busy) return;
+    locked.current = true; setBusy(true); setError('');
+    try {
+      await RequestService.newRequest('emergency');
+      if (mounted.current) { setReceipt(null); setDescription(''); }
+    } catch (cause) {
+      if (mounted.current) setError(requestErrorMessage(cause, language));
+    } finally { locked.current = false; if (mounted.current) setBusy(false); }
   };
 
   return (
     <ScreenShell highContrast={isHighContrast}>
-      <HeroPanel
-        theme={theme}
-        eyebrow={language === 'ar' ? 'قناة استجابة عاجلة' : 'Urgent response channel'}
-        title={confirmed ? (language === 'ar' ? 'منارة الطوارئ نشطة' : 'SOS beacon is active') : (language === 'ar' ? 'هل تحتاج مساعدة؟' : 'Do you need help?')}
-        subtitle={
-          confirmed
-            ? (language === 'ar' ? 'تم إرسال موقعك. ابق في مكانك واستمع لأي تعليمات صوتية.' : 'Your location was shared. Stay in place and listen for instructions.')
-            : (language === 'ar' ? 'سيتم إرسال موقعك وآخر نقطة قريبة إلى فريق الأمن.' : 'Your position and nearest known point will be sent to the security team.')
-        }
-        code="SOS"
-      />
-
-      {!confirmed ? (
+      <HeroPanel theme={theme} code="SOS"
+        eyebrow={ar ? 'طلب مساعدة' : 'Request assistance'}
+        title={receipt ? (ar ? 'متابعة طلب الطوارئ' : 'Track your SOS') : (ar ? 'هل تحتاج مساعدة؟' : 'Do you need help?')}
+        subtitle={ar ? 'إذا كانت المساعدة عاجلة ولم يتأكد استلام الطلب، اطلبها مباشرة من فريق الموقع.' : 'If help is urgent and acknowledgement is unconfirmed, contact site staff directly.'} />
+      {error ? <Text style={[styles.sosDescription, { color: theme.danger }]} accessibilityRole="alert" accessibilityLiveRegion="assertive">{error}</Text> : null}
+      {busy ? <ActivityIndicator size="large" color={theme.danger} accessibilityLabel={ar ? 'جاري التحقق من الطلب' : 'Checking request'} /> : null}
+      {receipt ? (
         <View style={[styles.sosPanel, surfaceStyle(theme)]}>
-          <SignalGlyph label="SOS" theme={theme} danger />
-          <Text style={[styles.sosTitle, { color: theme.text }]}>
-            {language === 'ar' ? 'تأكيد الإرسال مطلوب' : 'Confirmation required'}
-          </Text>
-          <Text style={[styles.sosDescription, { color: theme.textMuted }]}>
-            {language === 'ar'
-              ? 'اضغط الزر الأحمر فقط عند الحاجة لمساعدة عاجلة داخل الحرم أو المبنى.'
-              : 'Press the red button only when you need urgent assistance on campus or inside a building.'}
-          </Text>
-          <PrimaryButton
-            theme={theme}
-            title={submitting ? (language === 'ar' ? 'جاري الإرسال...' : 'Sending...') : (language === 'ar' ? 'تأكيد طلب المساعدة' : 'Confirm help request')}
-            onPress={handleConfirmSOS}
-            variant="danger"
-            disabled={submitting}
-            accessibilityLabel={language === 'ar' ? 'تأكيد طلب المساعدة العاجلة وإرسال الموقع' : 'Confirm SOS request and send location'}
-            accessibilityHint={language === 'ar' ? 'اضغط مرتين لتنبيه الأمن الجامعي فوراً' : 'Double tap to alert campus security immediately'}
-          />
-          {submitting ? <ActivityIndicator size="small" color={theme.danger} /> : null}
+          <StatusPill theme={theme} tone={terminal ? 'normal' : 'warning'} text={statusText} />
+          <Text selectable style={[styles.sosDescription, { color: theme.text }]}>{ar ? 'رقم الطلب' : 'Request ID'}: {receipt.id}</Text>
+          <Text style={[styles.sosDescription, { color: theme.textMuted }]}>{receipt.location_available
+            ? (ar ? 'أُرسلت إحداثيات الموقع وقت إنشاء الطلب؛ الموقع لا يتحدث تلقائيًا.' : 'Coordinates were sent when the request was created; location is not updated automatically.')
+            : (ar ? 'الموقع الجغرافي غير متاح. لم تُرسل إحداثيات؛ يحتاج الفريق إلى وصف مكانك.' : 'Location unavailable. No coordinates were sent; staff need a description of your position.')}</Text>
+          {!terminal ? <PrimaryButton theme={theme} title={ar ? 'تحديث حالة الطلب' : 'Refresh status'} accessibilityLabel={ar ? 'تحديث حالة الطلب' : 'Refresh status'} onPress={refresh} disabled={busy} variant="secondary" /> : null}
         </View>
       ) : (
-        <View style={[styles.sosPanel, surfaceStyle(theme), { borderColor: theme.danger }]}>
-          <View style={styles.statusRow}>
-            <StatusPill theme={theme} tone="danger" text={language === 'ar' ? 'الطلب مرسل' : 'Request sent'} />
-            <StatusPill theme={theme} tone="warning" text={language === 'ar' ? 'الاهتزاز نشط' : 'Pulse active'} />
-          </View>
-          <Text style={[styles.sosTitle, { color: theme.danger }]}>
-            {language === 'ar' ? 'ابق في مكانك' : 'Stay in place'}
-          </Text>
-          <Text style={[styles.sosDescription, { color: theme.textMuted }]}>
-            {language === 'ar'
-              ? 'تمت مشاركة الإحداثيات. سيستمر التطبيق بإصدار اهتزازات دورية حتى إيقاف المنارة.'
-              : 'Coordinates are shared. The app will keep pulsing until the beacon is stopped.'}
-          </Text>
+        <View style={[styles.sosPanel, surfaceStyle(theme)]}>
+          <Text style={[styles.sosDescription, { color: theme.text }]}>{ar ? 'صف مكانك إن أمكن؛ قد يتعذر تحديد الموقع داخل المبنى.' : 'Describe your position if possible; location may be unavailable indoors.'}</Text>
+          <TextInput value={description} onChangeText={setDescription} multiline maxLength={1500} editable={!busy}
+            accessibilityLabel={ar ? 'وصف مكانك لفريق المساعدة' : 'Describe your position to responders'}
+            placeholder={ar ? 'المبنى، الطابق، أقرب باب أو معلم…' : 'Building, floor, nearest door or landmark…'} placeholderTextColor={theme.textMuted}
+            style={{ width: '100%', minHeight: 90, padding: 14, color: theme.text, borderColor: theme.border, borderWidth: 1, borderRadius: 12, marginBottom: 16, textAlign: ar ? 'right' : 'left' }} />
+          <PrimaryButton theme={theme} title={ar ? 'تأكيد طلب المساعدة' : 'Confirm help request'} onPress={submit} variant="danger" disabled={busy}
+            accessibilityLabel={ar ? 'تأكيد إرسال طلب مساعدة عاجلة' : 'Confirm urgent help request'} />
         </View>
       )}
-
-      <PrimaryButton
-        theme={theme}
-        title={confirmed ? (language === 'ar' ? 'إيقاف المنارة وإلغاء الطلب' : 'Stop beacon and cancel') : (language === 'ar' ? 'إلغاء ورجوع' : 'Cancel and go back')}
-        onPress={handleCancelSOS}
-        variant={confirmed ? 'danger' : 'ghost'}
-        accessibilityLabel={language === 'ar' ? 'إلغاء طلب الطوارئ' : 'Cancel emergency request'}
-      />
+      {receipt && !terminal ? (
+        confirmCancel ? <View style={[styles.sosPanel, surfaceStyle(theme)]}>
+          <Text style={[styles.sosDescription, { color: theme.text }]}>{ar ? 'هل لم تعد بحاجة إلى المساعدة؟ يبقى الطلب نشطًا حتى يتأكد الإلغاء من الخادم.' : 'Do you no longer need help? The request stays active until cancellation is confirmed.'}</Text>
+          <PrimaryButton theme={theme} title={ar ? 'نعم، ألغِ طلب المساعدة' : 'Yes, cancel help request'} accessibilityLabel={ar ? 'تأكيد إلغاء الطلب' : 'Confirm cancellation'} onPress={cancel} disabled={busy} variant="danger" />
+          <PrimaryButton theme={theme} title={ar ? 'أبقِ الطلب نشطًا' : 'Keep request active'} accessibilityLabel={ar ? 'أبقِ الطلب نشطًا' : 'Keep request active'} onPress={() => setConfirmCancel(false)} disabled={busy} variant="secondary" />
+        </View> : <PrimaryButton theme={theme} title={ar ? 'لم أعد بحاجة إلى المساعدة' : 'I no longer need help'} accessibilityLabel={ar ? 'مراجعة إلغاء طلب المساعدة' : 'Review cancellation'} onPress={() => setConfirmCancel(true)} variant="secondary" disabled={busy} />
+      ) : null}
+      {terminal ? <PrimaryButton theme={theme} title={ar ? 'طلب مساعدة جديد' : 'New help request'} accessibilityLabel={ar ? 'بدء طلب جديد' : 'Start a new request'} onPress={newRequest} disabled={busy} /> : null}
+      {receipt && !terminal ? <Text style={[styles.sosDescription, { color: theme.textMuted }]}>{ar ? 'الرجوع للرئيسية يوقف التنبيه اللمسي فقط؛ طلب المساعدة يبقى مفتوحًا.' : 'Returning home stops the haptic alert; the help request remains open.'}</Text> : null}
+      <PrimaryButton theme={theme} title={ar ? 'الرجوع للرئيسية' : 'Return home'} accessibilityLabel={ar ? 'الرجوع للرئيسية دون إلغاء الطلب' : 'Return home without cancelling'} onPress={() => router.replace('/home')} variant="ghost" disabled={busy} />
     </ScreenShell>
   );
 }

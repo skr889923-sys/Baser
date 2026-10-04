@@ -1,0 +1,60 @@
+name: Project checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: local-build-placeholder
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: local-build-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run ts:check --workspace=apps/mobile -- --noEmit
+      - run: npx --no-install tsc -p apps/admin/tsconfig.json --noEmit --incremental false
+      - run: npm run build:admin
+      - run: npm run build --workspace=apps/mobile
+  database:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        baseline: [init, reset]
+        qr_schema: [canonical, legacy]
+        reports_table: [existing, missing]
+        include:
+          - baseline: init
+            qr_schema: legacy
+            reports_table: missing
+            deployed_schema: true
+          - baseline: reset
+            qr_schema: legacy
+            reports_table: missing
+            deployed_schema: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated PostgreSQL tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          pg_config --bindir >> "$GITHUB_PATH"
+      - run: python3 scripts/test-campus-database.py
+      - name: Test migrations, roles, retries and cancellations
+        run: >-
+          python3 scripts/test-map-permissions.py
+          --baseline ${{ matrix.baseline }}
+          --legacy-route-steps
+          ${{ matrix.qr_schema == 'legacy' && '--legacy-qr-schema' || '' }}
+          ${{ matrix.reports_table == 'missing' && '--missing-reports' || '' }}
+          ${{ matrix.deployed_schema && '--deployed-schema' || '' }}
+          --migration supabase/migrations/20260928090000_map_editor_permissions.sql
+          --route-migration supabase/migrations/20260928100000_route_step_schema_and_atomic_save.sql
+          --safety-migration supabase/migrations/20261003090000_operational_safety.sql
