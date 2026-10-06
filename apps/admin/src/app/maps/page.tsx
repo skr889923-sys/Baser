@@ -8,8 +8,9 @@ export default function MapsPage() {
     <div className="space-y-6 max-w-7xl mx-auto flex flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-2">محرر الخرائط (Map Editor)</h1>
-          <p className="text-slate-500 font-medium">قم بإضافة النقاط الملاحية على الخريطة مباشرة وحفظها لقاعدة البيانات.</p>
+          <p className="mb-2 text-xs font-semibold text-[#176d66]">بناء شبكة الملاحة</p>
+          <h1 className="mb-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">محرر الخريطة</h1>
+          <p className="max-w-2xl text-sm leading-7 text-slate-500">استكشف الحرم بالشوارع أو صور القمر الصناعي، وحدد النقاط والمسارات بمساعدة موقع جهازك أثناء المسح الميداني.</p>
         </div>
       </div>
 
