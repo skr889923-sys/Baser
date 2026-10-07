@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline, Circle, CircleMarker, ScaleControl, ZoomControl } from 'react-leaflet';
 import { Check, Crosshair, Layers, Loader2, MapPin, Navigation, Route as RouteIcon, Satellite, Save, X } from 'lucide-react';
 import L from 'leaflet';
@@ -362,6 +363,7 @@ export default function MapEditorMap() {
                 <Popup>
                   <div className="font-bold text-slate-800">{pt.name_ar}</div>
                   <div className="text-slate-500 text-xs mb-1">{pt.type}</div>
+                  {mode === 'browse' && <Link href={`/points?edit=${encodeURIComponent(pt.id)}`} className="mt-2 inline-block text-sm font-semibold text-indigo-700 underline">تعديل بيانات النقطة</Link>}
                   {mode === 'add_route' && (
                     <div className="text-[10px] text-amber-600 font-bold mt-1">انقر لتحديده في المسار</div>
                   )}

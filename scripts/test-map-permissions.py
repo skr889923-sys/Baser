@@ -19,6 +19,7 @@ parser.add_argument('--deployed-schema', action='store_true',
                     help='Reproduce the legacy column shapes and missing tables reported on 2026-10-04')
 parser.add_argument('--route-migration', type=pathlib.Path)
 parser.add_argument('--safety-migration', type=pathlib.Path)
+parser.add_argument('--point-migration', type=pathlib.Path)
 args = parser.parse_args()
 if args.deployed_schema:
     args.legacy_qr_schema = True
@@ -233,6 +234,11 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
             phases.append(('operational safety regressions', (ROOT / 'supabase/tests/operational_safety.sql').read_text()))
             phases.append(('read-only deployment diagnostics', diagnostic_sql))
             phases.append(('read-only previous test id checks', (ROOT / 'supabase/diagnostics/previous_test_ids.sql').read_text()))
+        if args.point_migration:
+            phases.append(('point management migration', args.point_migration.read_text()))
+            phases.append(('point management idempotence', args.point_migration.read_text()))
+            phases.append(('point management regressions', "select set_config('baser.test_database','disposable-local-runner',false);\n" +
+                           (ROOT / 'supabase/tests/navigation_point_management.sql').read_text()))
         safety_snapshot = '''
           select jsonb_build_object(
             'buildings',(select count(*) from public.buildings),
@@ -280,9 +286,10 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                     if failed.returncode == 0 or 'division by zero' not in failed.stderr or schema_snapshot() != before_schema:
                         raise SystemExit('Late migration failure did not roll back reports creation and schema changes')
                     print(f'PASS {args.baseline}: late failure rolls back reports creation')
-            if name == 'operational safety regressions':
+            if name in ('operational safety regressions', 'point management regressions'):
                 before_test = snapshot()
-                blocked = subprocess.run(command,input=sql,capture_output=True,text=True)
+                unmarked_sql = sql.replace("select set_config('baser.test_database','disposable-local-runner',false);\n", '', 1)
+                blocked = subprocess.run(command,input=unmarked_sql,capture_output=True,text=True)
                 if blocked.returncode == 0 or 'LOCAL_TEST_ONLY' not in blocked.stderr or snapshot() != before_test:
                     raise SystemExit('SQL regression file did not reject an unmarked session without changing data')
                 print(f'PASS {args.baseline}: regression file rejects accidental direct execution')
@@ -299,9 +306,9 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                 reports = next(table for table in schema_snapshot()['tables'] if table['table'] == 'reports')
                 if reports['exists'] == args.missing_reports:
                     raise SystemExit('Diagnostics did not correctly identify reports presence')
-            if name == 'operational safety regressions':
+            if name in ('operational safety regressions', 'point management regressions'):
                 if snapshot() != before_test:
-                    raise SystemExit('Safety regression file left test data or changed account roles')
+                    raise SystemExit('Regression file left test data or changed account roles')
                 print(f'PASS {args.baseline}: regression changes rolled back')
         if args.safety_migration:
             # Independent sessions race the same capability, as retries from

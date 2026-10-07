@@ -58,3 +58,4 @@ jobs:
           --migration supabase/migrations/20260928090000_map_editor_permissions.sql
           --route-migration supabase/migrations/20260928100000_route_step_schema_and_atomic_save.sql
           --safety-migration supabase/migrations/20261003090000_operational_safety.sql
+          --point-migration supabase/migrations/20261007090000_navigation_point_management.sql
