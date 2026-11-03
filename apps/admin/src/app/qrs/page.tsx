@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import AdminRecordActions from '@/components/AdminRecordActions';
 import { NavigationPoint } from '@baser/types';
 import { QrCode, Plus, RefreshCw, Trash2, Printer } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export default function QRsPage() {
   const fetchData = async () => {
     setLoading(true);
     // Fetch Points for dropdown
-    const { data: pData } = await supabase.from('navigation_points').select('*').eq('is_active', true);
+    const { data: pData } = await supabase.from('navigation_points').select('*');
     if (pData) setPoints(pData);
 
     // Fetch QRs
@@ -74,15 +75,6 @@ export default function QRsPage() {
       setSaveError('تعذر الاتصال لتأكيد الحفظ. احتُفظ بالبيانات؛ حدّث قائمة الرموز قبل إعادة المحاولة.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if(confirm('هل أنت متأكد من حذف هذا الرمز؟')) {
-      const { error } = await supabase.from('qr_codes').delete().eq('id', id);
-      if (!error) {
-        setQrs(qrs.filter(q => q.id !== id));
-      }
     }
   };
 
@@ -189,9 +181,11 @@ export default function QRsPage() {
                     <Printer className="w-4 h-4" />
                     طباعة
                   </button>
-                  <button onClick={() => handleDelete(qr.id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <AdminRecordActions table="qr_codes" record={qr} label={qr.code_content} disabled={saving} deleteNotice="سيُحذف الرمز وسجل مسحه. تغيير محتواه عند التعديل يتطلب إعادة طباعة الملصق."
+                    fields={[{key:'navigation_point_id',label:'نقطة التوجيه',type:'select',required:true,options:points.map(point => [point.id,point.name_ar])},
+                      {key:'code_content',label:'محتوى الرمز',required:true},{key:'location_description_ar',label:'وصف الموقع بالعربية',type:'textarea',required:true},{key:'location_description_en',label:'وصف الموقع بالإنجليزية',type:'textarea',required:true}]}
+                    onSaved={row => setQrs(current => current.map(item => item.id===row.id?{...row,point:points.find(point => point.id===row.navigation_point_id)}:item))}
+                    onDeleted={id => setQrs(current => current.filter(item => item.id!==id))}/>
                 </div>
               </div>
             </div>

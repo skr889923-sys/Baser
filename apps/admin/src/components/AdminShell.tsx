@@ -25,6 +25,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@baser/types';
 import { canAccessPage, getAdminIdentity } from '@/lib/admin-access';
+import { AdminRoleContext } from './AdminRoleContext';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -274,7 +275,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   );
 
   return (
-    <div className="min-h-[100dvh] lg:flex">
+    <AdminRoleContext.Provider value={{ role, userId: user?.id }}><div className="min-h-[100dvh] lg:flex">
       <a
         href="#main-content"
         className="fixed right-4 top-3 z-50 -translate-y-20 rounded-xl bg-[#176d66] px-4 py-3 text-sm font-black text-white focus:translate-y-0"
@@ -359,6 +360,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
-    </div>
+    </div></AdminRoleContext.Provider>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, Mic, PlayCircle, RefreshCw, Search, Square, UserPlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import AdminRecordActions from '@/components/AdminRecordActions';
 import { createRecordingDraft, saveVoiceRecording, type RecordingDraft } from '@/lib/voice-recording';
 import {
   Building,
@@ -579,6 +580,11 @@ export default function VoicesPage() {
             {recording && !isThisRecording && (
               <audio src={recording.audio_url} controls className="w-full h-9" />
             )}
+            {recording && <AdminRecordActions table="voice_recordings" record={recording} label={`تسجيل ${item.title}`} disabled={recordingBusy || characterSaving || recordingsLoading}
+              fields={[{key:'audio_url',label:'رابط الملف الصوتي (HTTPS)',required:true}]}
+              deleteNotice="سيُزال ربط العبارة بالتسجيل. يبقى الملف المرفوع لحماية أي مراجع أخرى تستخدمه."
+              onSaved={row => setRecordings(current => current.map(value => value.id===row.id?row as unknown as VoiceRecording:value))}
+              onDeleted={id => setRecordings(current => current.filter(value => value.id!==id))}/>}
 
             {isThisRecording ? (
               <button
@@ -672,8 +678,8 @@ export default function VoicesPage() {
             <h3 className="font-bold text-lg text-slate-800 mb-4">الشخصيات الصوتية</h3>
             <div className="space-y-2 mb-6">
               {characters.map(character => (
+                <div key={character.id} className="space-y-2">
                 <button
-                  key={character.id}
                   disabled={recordingBusy || characterSaving}
                   onClick={() => setActiveCharId(character.id)}
                   className={`w-full text-right px-4 py-3 rounded-xl font-bold transition-all ${
@@ -685,6 +691,12 @@ export default function VoicesPage() {
                   <span className="block">{character.name}</span>
                   <span className="text-xs text-slate-400 font-semibold">{character.gender === 'female' ? 'صوت أنثى' : 'صوت ذكر'}</span>
                 </button>
+                <AdminRecordActions table="voice_characters" record={character} label={character.name} disabled={recordingBusy || characterSaving || recordingsLoading}
+                  fields={[{key:'name',label:'اسم الشخصية',required:true},{key:'gender',label:'نوع الصوت',type:'select',required:true,options:[['female','أنثى'],['male','ذكر']]}]}
+                  deleteNotice="ستُحذف الشخصية وروابط تسجيلاتها. لن تُحذف ملفات صوتية قد تستخدمها مراجع أخرى."
+                  onSaved={row => setCharacters(current=>current.map(value=>value.id===row.id?row as unknown as VoiceCharacter:value))}
+                  onDeleted={async id => { if(activeCharId===id){setActiveCharId(null);setRecordings([]);} await fetchData(); }}/>
+                </div>
               ))}
               {characters.length === 0 && (
                 <p className="text-sm text-slate-500 text-center py-4">لا توجد شخصيات. أضف شخصية للبدء.</p>

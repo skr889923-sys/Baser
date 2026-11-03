@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { saveRequestStatus } from '@/lib/request-status';
 import { supabase } from '@/lib/supabase';
+import AdminRecordActions from '@/components/AdminRecordActions';
 import { Building, NavigationPoint, Report, ReportStatus, ReportType } from '@baser/types';
 
 const reportTypeLabel: Record<ReportType, string> = {
@@ -145,6 +146,12 @@ export default function ReportsPage() {
               </div>
 
               <div className="flex flex-row md:flex-col gap-2 shrink-0 justify-end">
+                <AdminRecordActions table="reports" record={report} label={report.title || report.id} disabled={saving} deleteNotice="سيُحذف البلاغ نهائيًا ولن يظهر في متابعة صاحبه."
+                  fields={[{key:'title',label:'العنوان',required:true},{key:'description',label:'الوصف',type:'textarea',required:true},
+                    {key:'report_type',label:'نوع البلاغ',type:'select',required:true,options:Object.entries(reportTypeLabel)},
+                    {key:'status',label:'الحالة',type:'select',required:true,options:Object.entries(statusLabel)},{key:'admin_note',label:'ملاحظة الإدارة',type:'textarea'}]}
+                  onSaved={row => setReports(current => current.map(item => item.id===row.id?row as unknown as Report:item))}
+                  onDeleted={id => setReports(current => current.filter(item => item.id!==id))}/>
                 {report.status === 'new' && (
                   <button
                     disabled={saving}

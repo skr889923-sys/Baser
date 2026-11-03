@@ -2,6 +2,7 @@
 
 import React from 'react';
 import MapEditor from '../../components/MapEditor';
+import Link from 'next/link';
 
 export default function MapsPage() {
   return (
@@ -17,6 +18,7 @@ export default function MapsPage() {
       <div className="min-h-0">
         <MapEditor />
       </div>
+      <div className="flex flex-wrap gap-3"><Link className="secondary-action" href="/points">تعديل النقاط وحذفها</Link><Link className="secondary-action" href="/routes">تعديل المسارات وحذفها</Link></div>
     </div>
   );
 }

@@ -20,6 +20,7 @@ parser.add_argument('--deployed-schema', action='store_true',
 parser.add_argument('--route-migration', type=pathlib.Path)
 parser.add_argument('--safety-migration', type=pathlib.Path)
 parser.add_argument('--point-migration', type=pathlib.Path)
+parser.add_argument('--management-migration', type=pathlib.Path)
 args = parser.parse_args()
 if args.deployed_schema:
     args.legacy_qr_schema = True
@@ -35,7 +36,7 @@ bootstrap = """
 create role anon;
 create role authenticated;
 create schema auth;
-create table auth.users(id uuid primary key);
+create table auth.users(id uuid primary key, email text unique);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
 $$;
@@ -240,6 +241,11 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
             phases.append(('point management idempotence', args.point_migration.read_text()))
             phases.append(('point management regressions', "select set_config('baser.test_database','disposable-local-runner',false);\n" +
                            (ROOT / 'supabase/tests/navigation_point_management.sql').read_text()))
+        if args.management_migration:
+            phases.append(('campus schema for complete management', (ROOT / 'supabase/migrations/20260906090000_campus_networks.sql').read_text()))
+            phases.append(('complete management migration', args.management_migration.read_text()))
+            phases.append(('complete management idempotence', args.management_migration.read_text()))
+            phases.append(('complete management regressions', (ROOT / 'supabase/tests/complete_admin_management.sql').read_text()))
         safety_snapshot = '''
           select jsonb_build_object(
             'buildings',(select count(*) from public.buildings),
@@ -290,7 +296,7 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                     if failed.returncode == 0 or 'division by zero' not in failed.stderr or schema_snapshot() != before_schema:
                         raise SystemExit('Late migration failure did not roll back reports creation and schema changes')
                     print(f'PASS {args.baseline}: late failure rolls back reports creation')
-            if name in ('operational safety regressions', 'point management regressions', 'route management regressions'):
+            if name in ('operational safety regressions', 'point management regressions', 'route management regressions', 'complete management regressions'):
                 before_test = snapshot()
                 unmarked_sql = sql.replace("select set_config('baser.test_database','disposable-local-runner',false);\n", '', 1)
                 blocked = subprocess.run(command,input=unmarked_sql,capture_output=True,text=True)
@@ -310,7 +316,7 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                 reports = next(table for table in schema_snapshot()['tables'] if table['table'] == 'reports')
                 if reports['exists'] == args.missing_reports:
                     raise SystemExit('Diagnostics did not correctly identify reports presence')
-            if name in ('operational safety regressions', 'point management regressions', 'route management regressions'):
+            if name in ('operational safety regressions', 'point management regressions', 'route management regressions', 'complete management regressions'):
                 if snapshot() != before_test:
                     raise SystemExit('Regression file left test data or changed account roles')
                 print(f'PASS {args.baseline}: regression changes rolled back')

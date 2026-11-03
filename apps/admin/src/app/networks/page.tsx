@@ -4,6 +4,7 @@ import { CampusNetwork, CampusEdge, CampusNode, NetworkPath, NetworkValidationEr
 import type { RouteType } from '@baser/types';
 import { supabase } from '@/lib/supabase';
 import NetworkDiagram from '@/components/NetworkDiagram';
+import AdminRecordActions from '@/components/AdminRecordActions';
 
 type Snapshot = { id: string; revision: number; document: CampusNetwork; is_published: boolean };
 const inputClass = 'mt-1 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900';
@@ -95,6 +96,9 @@ export default function NetworksPage() {
         <div><h2 className="text-xl font-black">{network.name_ar}</h2><p className="mt-2 text-sm">{network.nodes.features.length} نقطة · {network.edges.features.length} مقطع · {network.buildings.features.length} مبانٍ · {network.fixture?'بيانات مصطنعة — ليست موقعًا حقيقيًا':saved?.is_published?'نسخة منشورة':'مسودة ميدانية'}{dirty?' · تغييرات غير محفوظة':''}</p></div>
         <button onClick={download} className="rounded-xl border border-white/40 px-4 py-2">تصدير نسخة للمراجعة</button>
       </div>
+      {saved && <AdminRecordActions table="campus_networks" record={saved} label={network.name_ar} disabled={busy} deleteNotice="سيُحذف كامل مخطط الشبكة وستتوقف إتاحته للإرشاد. صدّر نسخة قبل الحذف إذا احتجت الاحتفاظ بها."
+        onDeleted={async id => { setRecords(current=>current.filter(record=>record.id!==id)); setNetwork(null);setSaved(null);setDirty(false);setMessage('تم حذف الشبكة.'); }}/ >}
+      <fieldset disabled={busy} className="grid gap-4 rounded-xl border bg-white p-4 md:grid-cols-2">{(['name_ar','name_en'] as const).map(key => <label key={key} className="text-sm font-bold">{key==='name_ar'?'اسم الشبكة بالعربية':'اسم الشبكة بالإنجليزية'}<input required className={inputClass} value={network[key]} onChange={event=>{setNetwork(current=>current?{...current,[key]:event.target.value}:current);setDirty(true);}}/></label>)}</fieldset>
       {preview.errors.length===0?<NetworkDiagram network={network} path={preview.path} selected={selected} onSelect={setSelected}/>:null}
       <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-3">
         <label className="font-bold">بداية المعاينة<select className={inputClass} value={start} onChange={e=>setStart(e.target.value)}>{network.nodes.features.map(n=><option key={n.properties.id} value={n.properties.id}>{n.properties.name_ar||n.properties.id}</option>)}</select></label>

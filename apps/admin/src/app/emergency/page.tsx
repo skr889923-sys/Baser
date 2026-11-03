@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { EmergencyRequest, EmergencyStatus } from '@baser/types';
 import { supabase } from '@/lib/supabase';
+import AdminRecordActions from '@/components/AdminRecordActions';
 import { saveRequestStatus } from '@/lib/request-status';
 
 const labels: Record<EmergencyStatus, string> = {
@@ -87,6 +88,10 @@ export default function EmergencyPage() {
     } finally { writing.current = false; if (mounted.current) setPending(null); }
   };
   const active = requests.filter(request => !closed(request));
+  const recordActions = (request: EmergencyRequest) => <AdminRecordActions table="emergency_requests" record={request} label={`طلب الطوارئ ${request.id}`} disabled={pending!==null}
+    deleteNotice="يجب معالجة الطلب وإغلاقه قبل حذفه. بعد الحذف لن يظهر في متابعة صاحبه."
+    fields={[{key:'status',label:'الحالة',type:'select',required:true,options:Object.entries(labels).filter(([status]) => closed(request)?status===request.status:status!=='cancelled')},{key:'admin_note',label:'ملاحظة الإدارة',type:'textarea'}]}
+    onSaved={async () => { await refresh(); }} onDeleted={async () => { await refresh(); }}/>
 
   return (
     <div className="space-y-6">
@@ -104,6 +109,7 @@ export default function EmergencyPage() {
           <div className="flex flex-wrap justify-between gap-3"><strong className="text-red-800">{labels[request.status]}</strong><time className="text-sm text-slate-600">{new Date(request.created_at).toLocaleString('ar-SA')}</time></div>
           <p className="break-all text-sm text-slate-600">رقم الطلب: {request.id}</p>
           <p className="whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-slate-950">{request.message || 'لم يُرسل وصف إضافي.'}</p>
+          {request.admin_note && <p className="rounded-xl bg-sky-50 p-3 text-sm text-slate-800">ملاحظة الإدارة: {request.admin_note}</p>}
           {request.latitude != null && request.longitude != null ? (
             <div className="space-y-2"><p>الإحداثيات وقت الإرسال: <span dir="ltr">{request.latitude.toFixed(5)}, {request.longitude.toFixed(5)}</span></p><p className="text-sm text-slate-600">الموقع لا يتحدث تلقائيًا. تحقق من وصف المكان قبل التوجه.</p></div>
           ) : <p className="rounded-xl bg-amber-50 p-4 text-amber-900">الموقع الجغرافي غير متاح. لا توجد إحداثيات مؤكدة لهذا الطلب؛ اعتمد على وصف المكان وآلية الاستجابة المعتمدة في الموقع.</p>}
@@ -112,10 +118,11 @@ export default function EmergencyPage() {
             {request.status === 'contacted' ? <button disabled={pending !== null} className="primary-action disabled:opacity-50" onClick={() => changeStatus(request, 'arrived')}>تسجيل الوصول إلى المستخدم</button> : null}
             <button disabled={pending !== null} className="secondary-action disabled:opacity-50" onClick={() => changeStatus(request, 'resolved')}>إغلاق الطلب بعد المعالجة</button>
             {pending === request.id ? <span role="status">جاري تأكيد الحفظ…</span> : null}
+            {recordActions(request)}
           </div>
         </article>
       ))}
-      {requests.some(closed) ? <section className="surface-panel"><h3 className="mb-4 font-bold">الطلبات المغلقة</h3><ul className="space-y-3">{requests.filter(closed).map(request => <li key={request.id} className="break-all text-sm">{request.id} — {labels[request.status]}</li>)}</ul></section> : null}
+      {requests.some(closed) ? <section className="surface-panel"><h3 className="mb-4 font-bold">الطلبات المغلقة</h3><ul className="space-y-3">{requests.filter(closed).map(request => <li key={request.id} className="break-all space-y-2 text-sm"><p>{request.id} — {labels[request.status]}</p>{recordActions(request)}</li>)}</ul></section> : null}
     </div>
   );
 }

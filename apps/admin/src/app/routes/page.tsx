@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { requireMapEditorAccess, mapWriteError } from '@/lib/map-permissions';
 import { saveRouteWithFirstStep, type FirstStep } from '@/lib/save-route';
 import { deleteRoute, routeWriteError, setRouteStatus } from '@/lib/route-editor';
+import RouteEditDialog from '@/components/RouteEditDialog';
 import {
   DirectionType,
   HapticPatternType,
@@ -86,6 +87,7 @@ export default function RoutesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const busy = useRef(false);
@@ -238,6 +240,11 @@ export default function RoutesPage() {
 
   return (
     <div className="space-y-6">
+      {editingRoute && <RouteEditDialog route={editingRoute} points={points} onClose={() => setEditingRoute(null)} onSaved={snapshot => {
+        setRoutes(current => current.map(item => item.id===snapshot.route.id?snapshot.route:item));
+        setStepsByRoute(current => ({ ...current,[snapshot.route.id]:snapshot.steps }));
+        setSelectedRouteId(snapshot.route.id); setEditingRoute(null); setMessage('تم حفظ المسار وخطواته.');
+      }}/>}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h3 className="text-2xl font-bold text-slate-800">إدارة المسارات الملاحية</h3>
@@ -474,6 +481,7 @@ export default function RoutesPage() {
                       </div>
                     </div>
                   </div>
+                  <button type="button" disabled={saving || loading} onClick={event => { event.stopPropagation(); setEditingRoute(route); }} aria-label={`تعديل ${route.name_ar || route.id}`} className="secondary-action mt-3 w-full">تعديل المسار وخطواته</button>
                   <button type="button" disabled={saving || loading} title="حذف المسار" aria-label={`حذف ${route.name_ar || route.id}`}
                     onClick={event => { event.stopPropagation(); void handleDeleteRoute(route); }}
                     className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
@@ -538,6 +546,7 @@ export default function RoutesPage() {
                       </select>
                     </td>
                     <td className="p-4">
+                      <button type="button" disabled={saving || loading} onClick={event => { event.stopPropagation(); setEditingRoute(route); }} aria-label={`تعديل ${route.name_ar || route.id}`} className="secondary-action">تعديل</button>
                       <button type="button" disabled={saving || loading} title="حذف المسار" aria-label={`حذف ${route.name_ar || route.id}`}
                         onClick={event => { event.stopPropagation(); void handleDeleteRoute(route); }}
                         className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">

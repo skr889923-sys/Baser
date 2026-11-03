@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Building2, Edit2, Plus, RefreshCw } from 'lucide-react';
 import type { Building, BuildingType } from '@baser/types';
 import { supabase } from '@/lib/supabase';
+import AdminRecordActions from '@/components/AdminRecordActions';
 import { detectBuildingSchema, emptyBuildingDraft, saveBuilding, setBuildingActive,
   type BuildingDraft, type BuildingSchema } from '@/lib/building-editor';
 
@@ -146,7 +147,9 @@ export default function BuildingsPage() {
                 <td className="p-4 text-slate-600">{building.name_en}</td>
                 <td className="p-4 text-slate-500 text-sm">{building.latitude == null || building.longitude == null ? 'لم تُحدّد' : <span dir="ltr" className="font-mono inline-block">{building.latitude.toFixed(5)}, {building.longitude.toFixed(5)}</span>}</td>
                 <td className="p-4"><button disabled={saving || showForm} onClick={() => toggleActive(building)} aria-label={`${building.is_active ? 'تعطيل' : 'تفعيل'} ظهور ${building.name_ar}`} className={`px-3 py-1 text-xs rounded-full border disabled:opacity-50 ${building.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>{building.is_active ? 'مُفعّل' : 'مُعطّل'}</button></td>
-                <td className="p-4"><button disabled={saving} onClick={() => openForm(building)} aria-label={`تعديل ${building.name_ar}`} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button></td>
+                <td className="p-4"><div className="flex flex-wrap gap-2"><button disabled={saving} onClick={() => openForm(building)} aria-label={`تعديل ${building.name_ar}`} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg disabled:opacity-50"><Edit2 className="w-4 h-4" /></button>
+                  <AdminRecordActions table="buildings" record={building} label={building.name_ar} disabled={saving || showForm} deleteNotice="سيُحذف المبنى وطوابقه. يجب نقل النقاط المرتبطة أو حذفها أولًا." onDeleted={id => setBuildings(current => current.filter(item => item.id!==id))}/>
+                </div></td>
               </tr>)}
           </tbody>
         </table>

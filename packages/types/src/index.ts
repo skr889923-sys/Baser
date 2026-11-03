@@ -182,6 +182,7 @@ export interface EmergencyRequest {
   nearest_point_id?: string | null;
   nearest_building_id?: string | null;
   message?: string;
+  admin_note?: string;
   status: EmergencyStatus;
   handled_by?: string | null;
   created_at: string;

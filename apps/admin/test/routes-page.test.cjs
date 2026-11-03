@@ -14,14 +14,25 @@ global.window = dom.window; global.document = dom.window.document;
 global.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = requireProject('react-dom/client');
 const route = id => ({ id, name_ar: id, name_en: id, start_point_id: 'p1', end_point_id: 'p2',
-  route_type: 'safe_accessible', distance_meters: 20, estimated_minutes: 1, status: 'active', updated_at: 'v1' });
+  route_type: 'safe_accessible', distance_meters: 20, estimated_minutes: 1, status: 'active', updated_at: 'v1', has_stairs:false, has_ramp:false, wheelchair_accessible:true, visually_impaired_friendly:true });
 let routes = [route('route-a'), route('route-b')];
 let steps = routes.map(r => ({ id: 'step-' + r.id, route_id: r.id, step_order: 1,
   instruction_ar: 'guide-' + r.id, distance_meters: 20 }));
 const controls = { confirmed: false, confirmations: 0, deletes: 0, failDelete: false,
-  emptyDelete: false, failRead: false, role: 'university_admin', holdDelete: null };
+  emptyDelete: false, failRead: false, role: 'university_admin', holdDelete: null, editCalls: 0, failEdit: false };
 dom.window.confirm = () => { controls.confirmations++; return controls.confirmed; };
 const client = {
+  async rpc(name,args) {
+    const route=routes.find(row=>row.id===args.route_id);
+    if(name==='get_route_for_edit')return {data:{route,steps:steps.filter(step=>step.route_id===route.id)},error:null};
+    assert.equal(name,'save_route_edit');controls.editCalls++;
+    if(controls.failEdit)return {data:null,error:{code:'PT409'}};
+    const saved={...args.route_data,updated_at:'v2'};
+    routes=routes.map(row=>row.id===saved.id?saved:row);
+    const savedSteps=args.steps_data.map((step,index)=>({...step,id:step.id||'new-step',route_id:saved.id,step_order:index+1}));
+    steps=[...steps.filter(step=>step.route_id!==saved.id),...savedSteps];
+    return {data:{route:saved,steps:savedSteps},error:null};
+  },
   auth: { getUser: async () => ({ data: { user: { id: 'editor' } }, error: null }) },
   from(table) {
     let operation = 'read', payload; const filters = [];
@@ -37,7 +48,7 @@ const client = {
           if (controls.failDelete) return { data: null, error: { code: '42501', message: 'Denied' } };
           if (controls.emptyDelete) return { data: null, error: null };
         } else if (controls.failRead && operation === 'read') return { data: null, error: { code: 'NETWORK' } };
-        const rows = table === 'routes' ? routes : table === 'route_steps' ? steps : [];
+        const rows = table === 'routes' ? routes : table === 'route_steps' ? steps : table === 'navigation_points' ? [{id:'p1',name_ar:'Start',is_active:true},{id:'p2',name_ar:'End',is_active:true}] : [];
         const matches = rows.filter(row => filters.every(([key, value]) => row[key] === value));
         if (operation === 'delete') {
           const ids = new Set(matches.map(row => row.id));
@@ -53,10 +64,10 @@ const client = {
 const modules = new Map();
 function load(file) {
   if (modules.has(file)) return modules.get(file);
-  const context = { exports: {}, window: dom.window, console, setTimeout, clearTimeout, URLSearchParams,
+  const context = { exports: {}, window: dom.window, document:dom.window.document, crypto:require('node:crypto').webcrypto, console, setTimeout, clearTimeout, URLSearchParams,
     require(name) {
       if (name === '@/lib/supabase') return { supabase: client };
-      if (name.startsWith('@/')) return load(path.join(project, 'apps/admin/src', name.slice(2) + '.ts'));
+      if (name.startsWith('@/')) { const base=path.join(project,'apps/admin/src',name.slice(2)); return load(fs.existsSync(base+'.ts')?base+'.ts':base+'.tsx'); }
       return requireProject(name);
     } };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
@@ -113,4 +124,17 @@ test('routes page deletes from desktop/mobile only after confirmation and a matc
   controls.failRead = false; routes = [route('route-c')];
   await click(document.querySelector('button[aria-label="تحديث المسارات"]'));
   assert.equal(deleteButtons('route-c').length, 2, 'Refreshing can recover after a failed read');
+  steps=[{id:'step-c',route_id:'route-c',step_order:1,from_point_id:'p1',to_point_id:'p2',instruction_ar:'guide-c',instruction_en:'Proceed',distance_meters:20,direction:'straight',haptic_pattern:'continue',warning_level:'none'}];
+  await click([...document.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')==='تعديل route-c'));
+  assert.ok(document.querySelector('[role="dialog"]'),'Route editor opens');
+  await click([...document.querySelectorAll('button')].find(button=>button.textContent==='إلغاء'));
+  assert.equal(controls.editCalls,0,'Cancel must not save edits');
+  await click([...document.querySelectorAll('button')].find(button=>button.getAttribute('aria-label')==='تعديل route-c'));
+  controls.failEdit=true;
+  await React.act(async()=>{document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await settle();});
+  assert.ok(document.querySelector('[role="dialog"] [role="alert"]'),'Stale save keeps editor and inputs');
+  controls.failEdit=false;
+  await React.act(async()=>{document.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await settle();});
+  assert.equal(document.querySelector('[role="dialog"]'),null,'Confirmed edit closes editor');
+  assert.ok(document.body.textContent.includes('guide-c'),'Saved steps replace the displayed guidance');
 });
