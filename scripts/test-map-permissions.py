@@ -232,6 +232,7 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                   end $$;
                 '''))
             phases.append(('operational safety regressions', (ROOT / 'supabase/tests/operational_safety.sql').read_text()))
+            phases.append(('route management regressions', (ROOT / 'supabase/tests/route_management.sql').read_text()))
             phases.append(('read-only deployment diagnostics', diagnostic_sql))
             phases.append(('read-only previous test id checks', (ROOT / 'supabase/diagnostics/previous_test_ids.sql').read_text()))
         if args.point_migration:
@@ -245,6 +246,9 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
             'voice_characters',(select count(*) from public.voice_characters),
             'voice_recordings',(select count(*) from public.voice_recordings),
             'points',(select count(*) from public.navigation_points),
+            'routes',(select count(*) from public.routes),
+            'route_steps',(select count(*) from public.route_steps),
+            'route_sessions',(select count(*) from public.route_sessions),
             'qrs',(select count(*) from public.qr_codes),
             'emergencies',(select count(*) from public.emergency_requests),
             'reports',(select count(*) from public.reports),
@@ -286,7 +290,7 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                     if failed.returncode == 0 or 'division by zero' not in failed.stderr or schema_snapshot() != before_schema:
                         raise SystemExit('Late migration failure did not roll back reports creation and schema changes')
                     print(f'PASS {args.baseline}: late failure rolls back reports creation')
-            if name in ('operational safety regressions', 'point management regressions'):
+            if name in ('operational safety regressions', 'point management regressions', 'route management regressions'):
                 before_test = snapshot()
                 unmarked_sql = sql.replace("select set_config('baser.test_database','disposable-local-runner',false);\n", '', 1)
                 blocked = subprocess.run(command,input=unmarked_sql,capture_output=True,text=True)
@@ -306,7 +310,7 @@ with tempfile.TemporaryDirectory(prefix='baser-map-rls-') as tmp:
                 reports = next(table for table in schema_snapshot()['tables'] if table['table'] == 'reports')
                 if reports['exists'] == args.missing_reports:
                     raise SystemExit('Diagnostics did not correctly identify reports presence')
-            if name in ('operational safety regressions', 'point management regressions'):
+            if name in ('operational safety regressions', 'point management regressions', 'route management regressions'):
                 if snapshot() != before_test:
                     raise SystemExit('Regression file left test data or changed account roles')
                 print(f'PASS {args.baseline}: regression changes rolled back')

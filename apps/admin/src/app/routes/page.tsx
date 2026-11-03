@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { requireMapEditorAccess, mapWriteError } from '@/lib/map-permissions';
 import { saveRouteWithFirstStep, type FirstStep } from '@/lib/save-route';
+import { deleteRoute, routeWriteError, setRouteStatus } from '@/lib/route-editor';
 import {
   DirectionType,
   HapticPatternType,
@@ -83,6 +85,11 @@ export default function RoutesPage() {
   const [form, setForm] = useState<RouteForm>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const busy = useRef(false);
+  const request = useRef(0);
 
   const pointsById = useMemo(() => {
     return Object.fromEntries(points.map(point => [point.id, point]));
@@ -90,35 +97,42 @@ export default function RoutesPage() {
 
   const selectedRouteSteps = selectedRouteId ? stepsByRoute[selectedRouteId] || [] : [];
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    const currentRequest = ++request.current;
     setLoading(true);
+    setError(null);
+    try {
+      const [pointsResult, routesResult, stepsResult] = await Promise.all([
+        supabase.from('navigation_points').select('*').order('name_ar', { ascending: true }),
+        supabase.from('routes').select('*').order('created_at', { ascending: false }),
+        supabase.from('route_steps').select('*').order('step_order', { ascending: true }),
+      ]);
+      if (currentRequest !== request.current) return;
+      if (pointsResult.error || routesResult.error || stepsResult.error) {
+        throw new Error('تعذر تحميل المسارات وخطواتها. أعد المحاولة؛ لم تُغيّر البيانات المعروضة.');
+      }
+      const loadedRoutes = (routesResult.data || []) as Route[];
+      setPoints((pointsResult.data || []) as NavigationPoint[]);
+      setRoutes(loadedRoutes);
 
-    const [{ data: pointsData }, { data: routesData }, { data: stepsData }] = await Promise.all([
-      supabase.from('navigation_points').select('*').eq('is_active', true).order('name_ar', { ascending: true }),
-      supabase.from('routes').select('*').order('created_at', { ascending: false }),
-      supabase.from('route_steps').select('*').order('step_order', { ascending: true }),
-    ]);
+      const groupedSteps = ((stepsResult.data || []) as RouteStep[]).reduce<Record<string, RouteStep[]>>((acc, step) => {
+        acc[step.route_id] = [...(acc[step.route_id] || []), step];
+        return acc;
+      }, {});
+      setStepsByRoute(groupedSteps);
 
-    const loadedRoutes = (routesData || []) as Route[];
-    setPoints((pointsData || []) as NavigationPoint[]);
-    setRoutes(loadedRoutes);
-
-    const groupedSteps = ((stepsData || []) as RouteStep[]).reduce<Record<string, RouteStep[]>>((acc, step) => {
-      acc[step.route_id] = [...(acc[step.route_id] || []), step];
-      return acc;
-    }, {});
-    setStepsByRoute(groupedSteps);
-
-    if (!selectedRouteId && loadedRoutes.length > 0) {
-      setSelectedRouteId(loadedRoutes[0].id);
+      setSelectedRouteId(current => loadedRoutes.some(route => route.id === current) ? current : loadedRoutes[0]?.id || '');
+    } catch (cause) {
+      if (currentRequest === request.current) setError(routeWriteError(cause));
+    } finally {
+      if (currentRequest === request.current) setLoading(false);
     }
-
-    setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+    return () => { request.current++; };
+  }, [fetchData]);
 
   const getPointName = (id: string) => pointsById[id]?.name_ar || 'نقطة غير معروفة';
 
@@ -136,12 +150,14 @@ export default function RoutesPage() {
 
   const handleAddRoute = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (busy.current || loading) return;
     if (!form.start_point_id || !form.end_point_id || form.start_point_id === form.end_point_id) {
       alert('يرجى اختيار نقطتي بداية ونهاية مختلفتين.');
       return;
     }
 
-    setSaving(true);
+    busy.current = true;
+    setSaving(true); setError(null); setMessage(null);
     try {
       await requireMapEditorAccess(supabase);
       const start = pointsById[form.start_point_id];
@@ -180,18 +196,44 @@ export default function RoutesPage() {
       setShowAddForm(false);
       setSelectedRouteId(routeData.id);
       await fetchData();
+      setMessage('تم حفظ المسار.');
     } catch (error) {
-      alert(mapWriteError(error));
+      setError(mapWriteError(error));
     } finally {
+      busy.current = false;
       setSaving(false);
     }
   };
 
-  const updateRouteStatus = async (id: string, status: RouteStatus) => {
-    const { error } = await supabase.from('routes').update({ status }).eq('id', id);
-    if (!error) {
-      setRoutes(routes.map(route => route.id === id ? { ...route, status } : route));
-    }
+  const updateRouteStatus = async (route: Route, status: RouteStatus) => {
+    if (busy.current || loading || status === route.status) return;
+    busy.current = true; setSaving(true); setError(null); setMessage(null);
+    try {
+      await requireMapEditorAccess(supabase);
+      const saved = await setRouteStatus(supabase, route, status);
+      setRoutes(current => current.map(item => item.id === saved.id ? saved : item));
+      setMessage('تم تغيير حالة المسار.');
+    } catch (cause) { setError(routeWriteError(cause)); }
+    finally { busy.current = false; setSaving(false); }
+  };
+
+  const handleDeleteRoute = async (route: Route) => {
+    if (busy.current || loading) return;
+    if (!window.confirm(`هل تريد حذف المسار «${route.name_ar || route.name_en || route.id}» نهائيًا؟ سيُحذف معه جميع خطوات التوجيه وسجلات الرحلات المرتبطة به. ستبقى نقاط التوجيه ورموز QR. لا يمكن التراجع عن الحذف.`)) return;
+    busy.current = true; setSaving(true); setDeletingId(route.id); setError(null); setMessage(null);
+    try {
+      await requireMapEditorAccess(supabase);
+      const id = await deleteRoute(supabase, route);
+      setRoutes(current => current.filter(item => item.id !== id));
+      setStepsByRoute(current => {
+        const remaining = { ...current };
+        delete remaining[id];
+        return remaining;
+      });
+      setSelectedRouteId(current => current === id ? routes.find(item => item.id !== id)?.id || '' : current);
+      setMessage('تم حذف المسار وخطواته المرتبطة بنجاح.');
+    } catch (cause) { setError(routeWriteError(cause)); }
+    finally { busy.current = false; setSaving(false); setDeletingId(null); }
   };
 
   return (
@@ -201,16 +243,24 @@ export default function RoutesPage() {
           <h3 className="text-2xl font-bold text-slate-800">إدارة المسارات الملاحية</h3>
           <p className="text-sm text-slate-500 mt-1">ربط نقاط الخريطة بمسارات قابلة للاستخدام مباشرة في تطبيق الجوال.</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="w-full sm:w-auto bg-sky-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-sky-700 transition-colors shadow-sm text-sm"
-        >
-          {showAddForm ? 'إلغاء الإضافة' : 'إضافة مسار جديد'}
-        </button>
+        <div className="flex gap-3">
+          <button onClick={fetchData} disabled={loading || saving} aria-label="تحديث المسارات" className="p-2.5 border border-slate-200 rounded-xl text-slate-600 disabled:opacity-50"><RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} /></button>
+          <button
+            disabled={loading || saving}
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="w-full sm:w-auto bg-sky-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-sky-700 transition-colors shadow-sm text-sm disabled:opacity-50"
+          >
+            {showAddForm ? 'إلغاء الإضافة' : 'إضافة مسار جديد'}
+          </button>
+        </div>
       </div>
+
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+      {message && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{message}</p>}
 
       {showAddForm && (
         <form onSubmit={handleAddRoute} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <fieldset disabled={saving || loading} className="contents">
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1.5">نقطة البداية</label>
             <select
@@ -220,7 +270,7 @@ export default function RoutesPage() {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-500"
             >
               <option value="">اختر نقطة...</option>
-              {points.map(point => <option key={point.id} value={point.id}>{point.name_ar}</option>)}
+              {points.filter(point => point.is_active).map(point => <option key={point.id} value={point.id}>{point.name_ar}</option>)}
             </select>
           </div>
 
@@ -233,7 +283,7 @@ export default function RoutesPage() {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-500"
             >
               <option value="">اختر نقطة...</option>
-              {points.map(point => <option key={point.id} value={point.id}>{point.name_ar}</option>)}
+              {points.filter(point => point.is_active).map(point => <option key={point.id} value={point.id}>{point.name_ar}</option>)}
             </select>
           </div>
 
@@ -363,6 +413,7 @@ export default function RoutesPage() {
           >
             {saving ? 'جاري الحفظ...' : 'حفظ المسار'}
           </button>
+          </fieldset>
         </form>
       )}
 
@@ -409,9 +460,11 @@ export default function RoutesPage() {
                       <div className="rounded-xl bg-slate-50 p-3">
                         <label className="text-xs font-bold text-slate-500 block mb-1">الحالة</label>
                         <select
+                          disabled={saving || loading}
+                          aria-label={`حالة ${route.name_ar || route.id}`}
                           value={route.status}
                           onClick={event => event.stopPropagation()}
-                          onChange={event => updateRouteStatus(route.id, event.target.value as RouteStatus)}
+                          onChange={event => updateRouteStatus(route, event.target.value as RouteStatus)}
                           className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold"
                         >
                           <option value="active">{statusLabel.active}</option>
@@ -421,6 +474,11 @@ export default function RoutesPage() {
                       </div>
                     </div>
                   </div>
+                  <button type="button" disabled={saving || loading} title="حذف المسار" aria-label={`حذف ${route.name_ar || route.id}`}
+                    onClick={event => { event.stopPropagation(); void handleDeleteRoute(route); }}
+                    className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />{deletingId === route.id ? 'جارٍ الحذف…' : 'حذف المسار'}
+                  </button>
                 </div>
               ))}
             </div>
@@ -434,13 +492,14 @@ export default function RoutesPage() {
                     <th className="p-4">التصنيف</th>
                     <th className="p-4">المسافة</th>
                     <th className="p-4">الحالة</th>
+                    <th className="p-4">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                 {loading ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-slate-500">جاري التحميل...</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">جاري التحميل...</td></tr>
                 ) : routes.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-slate-500">لا توجد مسارات محفوظة بعد.</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">{error ? 'تعذر تأكيد بيانات المسارات.' : 'لا توجد مسارات محفوظة بعد.'}</td></tr>
                 ) : routes.map(route => (
                   <tr
                     key={route.id}
@@ -466,15 +525,24 @@ export default function RoutesPage() {
                     </td>
                     <td className="p-4">
                       <select
+                        disabled={saving || loading}
+                        aria-label={`حالة ${route.name_ar || route.id}`}
                         value={route.status}
                         onClick={event => event.stopPropagation()}
-                        onChange={event => updateRouteStatus(route.id, event.target.value as RouteStatus)}
+                        onChange={event => updateRouteStatus(route, event.target.value as RouteStatus)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold"
                       >
                         <option value="active">{statusLabel.active}</option>
                         <option value="maintenance">{statusLabel.maintenance}</option>
                         <option value="closed">{statusLabel.closed}</option>
                       </select>
+                    </td>
+                    <td className="p-4">
+                      <button type="button" disabled={saving || loading} title="حذف المسار" aria-label={`حذف ${route.name_ar || route.id}`}
+                        onClick={event => { event.stopPropagation(); void handleDeleteRoute(route); }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />{deletingId === route.id ? 'جارٍ الحذف…' : 'حذف'}
+                      </button>
                     </td>
                   </tr>
                 ))}
